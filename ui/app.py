@@ -130,6 +130,24 @@ def upload_page():
                     with col3:
                         st.metric("File Size", f"{content.get('file_size', 0) // 1000} KB")
                     
+                    # Show extracted text
+                    st.subheader("📄 Extracted Text")
+                    raw_text = content.get('raw_text', '')
+                    if raw_text:
+                        # Show first 2000 characters with option to see more
+                        text_preview = raw_text[:2000] if len(raw_text) > 2000 else raw_text
+                        with st.expander("📖 View Extracted Text", expanded=False):
+                            st.text_area(
+                                "Extracted Content:",
+                                value=raw_text,
+                                height=400,
+                                disabled=True,
+                                label_visibility="collapsed"
+                            )
+                            st.caption(f"Total characters: {len(raw_text):,}")
+                    else:
+                        st.warning("⚠️ No text extracted from the file.")
+                    
                     # Show identified topics
                     if content.get('topics'):
                         st.subheader("📋 Identified Topics")
@@ -139,6 +157,19 @@ def upload_page():
                                     st.write("**Subtopics:**", ", ".join(topic['subtopics'][:5]))
                                 if topic.get('key_concepts'):
                                     st.write("**Key Concepts:**", ", ".join(topic['key_concepts'][:5]))
+                    
+                    # Show text chunks info
+                    chunks = content.get('chunks', [])
+                    if chunks:
+                        st.subheader("📚 Text Chunks")
+                        st.info(f"Document split into {len(chunks)} chunks for processing.")
+                        with st.expander("View Chunk Details", expanded=False):
+                            for i, chunk in enumerate(chunks[:5], 1):  # Show first 5 chunks
+                                st.markdown(f"**Chunk {i}** ({len(chunk)} characters):")
+                                st.text(chunk[:300] + "..." if len(chunk) > 300 else chunk)
+                                st.markdown("---")
+                            if len(chunks) > 5:
+                                st.caption(f"... and {len(chunks) - 5} more chunks")
                     
                     # Auto-generate flashcards and quizzes
                     st.info("💡 Tip: Navigate to Flashcards and Quizzes pages to generate study materials!")
