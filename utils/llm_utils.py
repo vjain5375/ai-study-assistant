@@ -254,10 +254,13 @@ def call_llm(prompt: str, system_message: str = None, provider: str = "gemini",
         # Handle different response types
         if hasattr(response, 'content'):
             content = response.content
+            print(f"   Response has 'content' attribute: {content is not None}")
             if content is None or (isinstance(content, str) and len(content.strip()) == 0):
                 raise ValueError("Empty response from LLM. The model may have encountered an error.")
+            print(f"   Content length: {len(content) if isinstance(content, str) else 'N/A'}")
             return content
         response_str = str(response)
+        print(f"   Response as string length: {len(response_str) if response_str else 0}")
         if not response_str or len(response_str.strip()) == 0:
             raise ValueError("Empty response from LLM. The model may have encountered an error.")
         return response_str
