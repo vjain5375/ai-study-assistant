@@ -248,10 +248,40 @@ def flashcards_page():
             st.markdown("---")
             st.markdown(f"### Card {st.session_state.current_card + 1} of {len(st.session_state.flashcards)}")
             
-            st.markdown(f"**❓ Question:**\n\n{card['question']}")
+            # Sticky note style in study mode
+            st.markdown(
+                f"""
+                <div style="
+                    background: linear-gradient(135deg, #ffd89b 0%, #ffecd2 100%);
+                    padding: 20px;
+                    border-radius: 10px;
+                    border-left: 5px solid #ff6b6b;
+                    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+                    margin: 20px 0;
+                ">
+                    <h3 style="color: #333; margin-top: 0;">📌 {card['question']}</h3>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
             
-            if st.button("👁️ Show Answer"):
-                st.markdown(f"**💡 Answer:**\n\n{card['answer']}")
+            if st.button("👁️ Show Answer", type="primary"):
+                st.markdown(
+                    f"""
+                    <div style="
+                        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+                        padding: 20px;
+                        border-radius: 10px;
+                        border-left: 5px solid #4ecdc4;
+                        box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+                        margin: 20px 0;
+                    ">
+                        <h4 style="color: #333; margin-top: 0;">💡 Answer:</h4>
+                        <p style="color: #555; font-size: 1.1em;">{card['answer']}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
             
             col1, col2 = st.columns(2)
             with col1:
@@ -264,13 +294,31 @@ def flashcards_page():
                     st.rerun()
         
         else:
-            # Show all flashcards
-            for i, card in enumerate(st.session_state.flashcards, 1):
-                with st.expander(f"Flashcard {i}: {card['question'][:50]}..."):
-                    st.markdown(f"**Question:** {card['question']}")
-                    st.markdown(f"**Answer:** {card['answer']}")
+            # Show all flashcards in sticky note style
+            cols = st.columns(2)  # 2 columns for sticky note layout
+            for i, card in enumerate(st.session_state.flashcards):
+                col_idx = i % 2
+                with cols[col_idx]:
+                    # Sticky note style card
+                    st.markdown(
+                        f"""
+                        <div style="
+                            background: linear-gradient(135deg, #ffd89b 0%, #ffecd2 100%);
+                            padding: 15px;
+                            border-radius: 8px;
+                            border-left: 4px solid #ff6b6b;
+                            margin-bottom: 15px;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                            min-height: 120px;
+                        ">
+                            <h4 style="color: #333; margin-top: 0;">📌 {card['question']}</h4>
+                            <p style="color: #555; font-size: 0.95em; margin-bottom: 0;">{card['answer']}</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                     if 'topic' in card:
-                        st.caption(f"Topic: {card['topic']}")
+                        st.caption(f"🏷️ {card['topic']}")
         
         # Download option
         st.download_button(

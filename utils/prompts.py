@@ -1,22 +1,27 @@
 """Prompt templates for different agents"""
 
-FLASHCARD_PROMPT = """You are a flashcard generator for students. Your task is to create concise, effective flashcards from study material.
+FLASHCARD_PROMPT = """You are a flashcard generator for students. Create SHORT sticky-note style flashcards with key points.
 
 Study Material:
 {text}
 
 Instructions:
-1. Create {num_flashcards} question-answer pairs from the provided text
-2. Questions should test understanding, not just memorization
-3. Answers should be clear and concise (2-3 sentences max)
-4. Focus on key concepts, definitions, and important facts
-5. Each flashcard should cover a distinct concept
+1. Create {num_flashcards} flashcards from the provided text
+2. Make them SHORT like sticky notes - maximum 1-2 sentences per answer
+3. Focus on KEY POINTS, definitions, and important facts
+4. Questions should be brief and direct
+5. Answers should be concise bullet points or short phrases
+6. Each flashcard = one key concept or fact
+
+Format: Short sticky-note style
+- Question: Brief, direct
+- Answer: 1-2 sentences max, key points only
 
 Return your response as a JSON array with this exact format:
 [
   {{
     "question": "What is...?",
-    "answer": "It is..."
+    "answer": "Short key point (1-2 sentences max)"
   }},
   ...
 ]

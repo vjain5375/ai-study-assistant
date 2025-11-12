@@ -32,6 +32,9 @@ class FlashcardAgent:
             num_flashcards=num_flashcards
         )
         
+        # Add instruction for short sticky-note style
+        prompt += "\n\nIMPORTANT: Keep answers SHORT (1-2 sentences max). Think sticky notes, not essays! Focus on key points only."
+        
         try:
             # Flashcard agent uses Groq LLaMA 3.1 70B
             response = call_llm(prompt, provider="groq")
