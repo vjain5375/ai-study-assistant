@@ -2,6 +2,7 @@
 import streamlit as st
 import json
 import os
+import glob
 from datetime import datetime
 import sys
 
@@ -175,15 +176,38 @@ def upload_page():
                             if len(chunks) > 5:
                                 st.caption(f"... and {len(chunks) - 5} more chunks")
                     
+                    # Show saved file location
+                    import config
+                    saved_file_path = os.path.join(config.UPLOAD_DIR, uploaded_file.name)
+                    if os.path.exists(saved_file_path):
+                        st.success(f"💾 File saved to: `{saved_file_path}`")
+                    else:
+                        # Check if file was saved with timestamp
+                        pattern = os.path.join(config.UPLOAD_DIR, f"{os.path.splitext(uploaded_file.name)[0]}*.pdf")
+                        matches = glob.glob(pattern)
+                        if matches:
+                            st.success(f"💾 File saved to: `{matches[-1]}`")
+                    
                     # Auto-generate flashcards and quizzes
                     st.info("💡 Tip: Navigate to Flashcards and Quizzes pages to generate study materials!")
                 
                 except Exception as e:
                     st.error(f"❌ Error processing file: {str(e)}")
-                    st.info("Make sure you have set your OpenAI API key in the sidebar.")
+                    st.info("Make sure you have set your API keys in Streamlit Cloud Secrets or .env file.")
     
     else:
         st.info("👆 Please upload a PDF file to get started")
+        
+        # Show previously uploaded files
+        import config
+        if os.path.exists(config.UPLOAD_DIR):
+            pdf_files = glob.glob(os.path.join(config.UPLOAD_DIR, "*.pdf"))
+            if pdf_files:
+                st.subheader("📁 Previously Uploaded Files")
+                for pdf_file in sorted(pdf_files, key=os.path.getmtime, reverse=True)[:5]:
+                    file_name = os.path.basename(pdf_file)
+                    file_size = os.path.getsize(pdf_file) / 1024
+                    st.caption(f"📄 {file_name} ({file_size:.2f} KB)")
 
 
 def flashcards_page():
