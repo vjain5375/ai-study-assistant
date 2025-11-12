@@ -106,6 +106,7 @@ def get_llm(provider: str = "gemini", model_name: str = None, temperature: float
             # Try different DeepSeek models
             models_to_try = [
                 model_name or config.DEEPSEEK_MODEL,
+                "DeepSeek-R1-distill-LLaMA",  # R1 distill model
                 "deepseek-chat",
                 "deepseek-reasoner"
             ]
