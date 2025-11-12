@@ -61,17 +61,48 @@ def main():
         import importlib
         importlib.reload(config)
         
-        # API Key input
+        # API Key input - Never display the actual key, only allow user to enter their own
         current_key = config.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY", "")
-        api_key = st.text_input("OpenAI API Key", type="password", value=current_key, help="Enter your OpenAI API key or it will be loaded from .env file")
-        if api_key and api_key != current_key:
-            os.environ["OPENAI_API_KEY"] = api_key
-            config.OPENAI_API_KEY = api_key
-            st.success("✅ API key updated!")
-        elif current_key and not api_key:
-            # Use the key from .env if user hasn't entered one
-            api_key = current_key
-            os.environ["OPENAI_API_KEY"] = current_key
+        
+        # Check if key exists but don't show it
+        if current_key:
+            # Key exists in environment - show status only
+            st.success("✅ API key configured (from environment)")
+            st.caption("Your API key is loaded securely from environment variables.")
+            
+            # Allow user to override with their own key if needed
+            user_key = st.text_input(
+                "Override API Key (optional)", 
+                type="password", 
+                value="", 
+                placeholder="Enter your own API key here",
+                help="Leave empty to use the configured key, or enter your own key"
+            )
+            
+            if user_key and user_key.strip():
+                # User entered a new key
+                os.environ["OPENAI_API_KEY"] = user_key.strip()
+                config.OPENAI_API_KEY = user_key.strip()
+                st.success("✅ API key updated!")
+                api_key = user_key.strip()
+            else:
+                # Use the existing key from environment
+                api_key = current_key
+        else:
+            # No key in environment - user must enter one
+            st.warning("⚠️ API key not configured")
+            st.caption("Enter your OpenAI API key to use the app.")
+            api_key = st.text_input(
+                "OpenAI API Key", 
+                type="password", 
+                value="", 
+                placeholder="sk-...",
+                help="Enter your OpenAI API key. Get one at https://platform.openai.com/api-keys"
+            )
+            if api_key and api_key.strip():
+                os.environ["OPENAI_API_KEY"] = api_key.strip()
+                config.OPENAI_API_KEY = api_key.strip()
+                st.success("✅ API key saved!")
         
         st.markdown("---")
         st.header("📖 Navigation")

@@ -5,9 +5,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # API Configuration
+# Load from environment - never hardcode keys here
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 USE_LOCAL_MODEL = os.getenv("LOCAL_MODEL", "False").lower() == "true"
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
+# Security: Never log or expose the API key
+if OPENAI_API_KEY:
+    # Mask the key for any logging (only show first 7 and last 4 chars)
+    _masked_key = f"{OPENAI_API_KEY[:7]}...{OPENAI_API_KEY[-4:]}" if len(OPENAI_API_KEY) > 11 else "***"
+    # Don't actually log it, just have the variable available if needed for debugging
 
 # Model Configuration
 DEFAULT_MODEL = "gpt-3.5-turbo"
