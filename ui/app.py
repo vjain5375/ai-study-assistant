@@ -61,48 +61,21 @@ def main():
         import importlib
         importlib.reload(config)
         
-        # API Key input - Never display the actual key, only allow user to enter their own
+        # API Key - Load from environment only, no user input
         current_key = config.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
         
-        # Check if key exists but don't show it
+        # Check if key exists and show status
         if current_key:
             # Key exists in environment - show status only
-            st.success("✅ Gemini API key configured (from environment)")
-            st.caption("Your API key is loaded securely from environment variables.")
-            
-            # Allow user to override with their own key if needed
-            user_key = st.text_input(
-                "Override API Key (optional)", 
-                type="password", 
-                value="", 
-                placeholder="Enter your own Gemini API key here",
-                help="Leave empty to use the configured key, or enter your own key"
-            )
-            
-            if user_key and user_key.strip():
-                # User entered a new key
-                os.environ["GEMINI_API_KEY"] = user_key.strip()
-                config.GEMINI_API_KEY = user_key.strip()
-                st.success("✅ API key updated!")
-                api_key = user_key.strip()
-            else:
-                # Use the existing key from environment
-                api_key = current_key
+            st.success("✅ API configured and ready")
+            st.caption("Using server-configured Gemini API key.")
+            api_key = current_key
         else:
-            # No key in environment - user must enter one
-            st.warning("⚠️ API key not configured")
-            st.caption("Enter your Google Gemini API key to use the app.")
-            api_key = st.text_input(
-                "Gemini API Key", 
-                type="password", 
-                value="", 
-                placeholder="AIza...",
-                help="Enter your Google Gemini API key. Get one at https://makersuite.google.com/app/apikey"
-            )
-            if api_key and api_key.strip():
-                os.environ["GEMINI_API_KEY"] = api_key.strip()
-                config.GEMINI_API_KEY = api_key.strip()
-                st.success("✅ API key saved!")
+            # No key configured - show error
+            st.error("❌ API key not configured")
+            st.caption("Please configure GEMINI_API_KEY in environment variables or .env file.")
+            st.stop()  # Stop the app if no API key
+            api_key = ""
         
         st.markdown("---")
         st.header("📖 Navigation")
