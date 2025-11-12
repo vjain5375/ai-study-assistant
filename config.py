@@ -6,19 +6,21 @@ load_dotenv()
 
 # API Configuration
 # Load from environment - never hardcode keys here
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+# Keep OpenAI for backward compatibility (optional)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 USE_LOCAL_MODEL = os.getenv("LOCAL_MODEL", "False").lower() == "true"
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 # Security: Never log or expose the API key
-if OPENAI_API_KEY:
+if GEMINI_API_KEY:
     # Mask the key for any logging (only show first 7 and last 4 chars)
-    _masked_key = f"{OPENAI_API_KEY[:7]}...{OPENAI_API_KEY[-4:]}" if len(OPENAI_API_KEY) > 11 else "***"
+    _masked_key = f"{GEMINI_API_KEY[:7]}...{GEMINI_API_KEY[-4:]}" if len(GEMINI_API_KEY) > 11 else "***"
     # Don't actually log it, just have the variable available if needed for debugging
 
 # Model Configuration
-DEFAULT_MODEL = "gpt-3.5-turbo"
-EMBEDDING_MODEL = "text-embedding-3-small"
+DEFAULT_MODEL = "gemini-pro"  # Google Gemini model
+EMBEDDING_MODEL = "text-embedding-3-small"  # Keep OpenAI embedding or switch to Gemini
 
 # File Paths
 OUTPUT_DIR = "outputs"

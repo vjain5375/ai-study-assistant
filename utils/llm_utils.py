@@ -2,7 +2,6 @@
 import json
 import os
 from typing import Dict, List, Any
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 import config
 
@@ -27,15 +26,27 @@ def get_llm(model_name: str = None, temperature: float = 0.7):
             temperature=temperature
         )
     else:
-        # Use OpenAI
-        if not config.OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY not set. Please set it in .env file")
-        
-        return ChatOpenAI(
-            model_name=model_name or config.DEFAULT_MODEL,
-            temperature=temperature,
-            openai_api_key=config.OPENAI_API_KEY
-        )
+        # Use Google Gemini (preferred) or fallback to OpenAI
+        if config.GEMINI_API_KEY:
+            try:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                return ChatGoogleGenerativeAI(
+                    model=model_name or config.DEFAULT_MODEL,
+                    temperature=temperature,
+                    google_api_key=config.GEMINI_API_KEY
+                )
+            except ImportError:
+                raise ImportError("langchain-google-genai not installed. Run: pip install langchain-google-genai")
+        elif config.OPENAI_API_KEY:
+            # Fallback to OpenAI if Gemini not available
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(
+                model_name=model_name or "gpt-3.5-turbo",
+                temperature=temperature,
+                openai_api_key=config.OPENAI_API_KEY
+            )
+        else:
+            raise ValueError("GEMINI_API_KEY or OPENAI_API_KEY not set. Please set it in .env file")
 
 
 def call_llm(prompt: str, system_message: str = None, model_name: str = None, timeout: int = 60) -> str:
@@ -74,7 +85,7 @@ def call_llm(prompt: str, system_message: str = None, model_name: str = None, ti
         if "timeout" in error_msg.lower() or "timed out" in error_msg.lower():
             raise TimeoutError(f"LLM request timed out after {timeout} seconds. Try with fewer chunks or smaller text.")
         elif "api" in error_msg.lower() and "key" in error_msg.lower():
-            raise ValueError("Invalid or missing OpenAI API key. Please check your API key in the sidebar.")
+            raise ValueError("Invalid or missing API key. Please check your Gemini API key in the sidebar.")
         else:
             raise Exception(f"Error calling LLM: {error_msg}")
 
