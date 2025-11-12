@@ -48,6 +48,8 @@ uploads/*
 
 # Streamlit
 .streamlit/
+!.streamlit/secrets.toml.example
+.streamlit/secrets.toml
 
 # OS
 .DS_Store

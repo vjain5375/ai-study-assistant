@@ -4,11 +4,35 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Try to load Streamlit secrets (for Streamlit Cloud)
+try:
+    import streamlit as st
+    _streamlit_available = True
+except ImportError:
+    _streamlit_available = False
+
+def get_secret(key: str, default: str = "") -> str:
+    """Get secret from Streamlit secrets or environment variables"""
+    # Try Streamlit secrets first (for Streamlit Cloud)
+    if _streamlit_available:
+        try:
+            # Check if we're in a Streamlit context
+            if hasattr(st, 'secrets'):
+                value = st.secrets.get(key, None)
+                if value:
+                    return value
+        except Exception:
+            pass
+    
+    # Fallback to environment variables
+    return os.getenv(key, default)
+
 # API Configuration
-# Load from environment - never hardcode keys here
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+# Load from Streamlit secrets (Cloud) or environment variables (local)
+# Priority: Streamlit secrets > Environment variables > .env file
+GEMINI_API_KEY = get_secret("GEMINI_API_KEY", "")
+GROQ_API_KEY = get_secret("GROQ_API_KEY", "")
+DEEPSEEK_API_KEY = get_secret("DEEPSEEK_API_KEY", "")
 # Keep OpenAI for backward compatibility (optional)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 USE_LOCAL_MODEL = os.getenv("LOCAL_MODEL", "False").lower() == "true"
