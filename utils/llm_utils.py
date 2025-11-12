@@ -242,7 +242,14 @@ def call_llm(prompt: str, system_message: str = None, provider: str = "gemini",
             messages.append(SystemMessage(content=system_message))
         messages.append(HumanMessage(content=prompt))
         
+        print(f"Sending request to {provider} LLM...")
+        print(f"   Prompt length: {len(prompt)} characters")
+        print(f"   Messages count: {len(messages)}")
+        
         response = llm.invoke(messages)
+        
+        print(f"Received response from {provider} LLM")
+        print(f"   Response type: {type(response)}")
         
         # Handle different response types
         if hasattr(response, 'content'):
