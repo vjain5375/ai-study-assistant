@@ -112,6 +112,10 @@ def upload_page():
     if uploaded_file is not None:
         st.success(f"✅ File uploaded: {uploaded_file.name}")
         
+        # Show file info
+        file_size = len(uploaded_file.getbuffer())
+        st.caption(f"File size: {file_size / 1024:.2f} KB")
+        
         if st.button("🚀 Process File", type="primary"):
             with st.spinner("Processing your study material..."):
                 try:

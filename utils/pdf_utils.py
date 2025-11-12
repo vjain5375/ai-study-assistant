@@ -40,22 +40,30 @@ def extract_text_from_uploaded_file(uploaded_file) -> str:
     Returns:
         Extracted text as a string
     """
-    # Save uploaded file temporarily
-    if not os.path.exists("uploads"):
-        os.makedirs("uploads")
+    # Save uploaded file permanently
+    import config
+    upload_dir = config.UPLOAD_DIR
     
-    temp_path = os.path.join("uploads", uploaded_file.name)
+    if not os.path.exists(upload_dir):
+        os.makedirs(upload_dir)
     
-    with open(temp_path, "wb") as f:
+    # Save file with original name
+    file_path = os.path.join(upload_dir, uploaded_file.name)
+    
+    # If file already exists, add timestamp to avoid overwriting
+    if os.path.exists(file_path):
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        name, ext = os.path.splitext(uploaded_file.name)
+        file_path = os.path.join(upload_dir, f"{name}_{timestamp}{ext}")
+    
+    # Save the file
+    with open(file_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     
-    try:
-        text = extract_text_from_pdf(temp_path)
-        return text
-    finally:
-        # Clean up temp file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+    # Extract text from saved file
+    text = extract_text_from_pdf(file_path)
+    return text
 
 
 def clean_text(text: str) -> str:
