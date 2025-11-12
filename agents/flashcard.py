@@ -26,16 +26,36 @@ class FlashcardAgent:
         Returns:
             List of flashcard dictionaries
         """
+        print(f"\n{'='*60}")
+        print(f"GENERATE_FLASHCARDS() CALLED")
+        print(f"{'='*60}")
+        print(f"Input text length: {len(text)} characters")
+        print(f"Input text preview: {text[:300]}...")
+        print(f"Input text FULL: {text}")
+        print(f"{'='*60}\n")
+        
+        if not text or len(text.strip()) == 0:
+            raise ValueError("ERROR: Empty text provided to generate_flashcards()!")
+        
         if num_flashcards is None:
             num_flashcards = min(self.max_flashcards, max(5, len(text) // 500))
         
+        print(f"Number of flashcards to generate: {num_flashcards}")
+        
+        # Use full text, not truncated
+        text_to_use = text[:4000]  # Limit to avoid token limits
+        print(f"Text being used (first 4000 chars): {len(text_to_use)} characters")
+        
         prompt = FLASHCARD_PROMPT.format(
-            text=text[:4000],  # Limit text length
+            text=text_to_use,
             num_flashcards=num_flashcards
         )
         
         # Add instruction for short sticky-note style
         prompt += "\n\nIMPORTANT: Keep answers SHORT (1-2 sentences max). Think sticky notes, not essays! Focus on key points only."
+        
+        print(f"Final prompt length: {len(prompt)} characters")
+        print(f"Final prompt: {prompt}")
         
         try:
             # Check API key before calling LLM
