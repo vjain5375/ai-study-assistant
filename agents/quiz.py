@@ -56,31 +56,60 @@ class QuizAgent:
             
             # Ensure it's a list
             if isinstance(questions, dict):
-                questions = [questions]
+                # If it's a dict with a 'questions' key, extract that
+                if 'questions' in questions:
+                    questions = questions['questions']
+                elif 'quiz' in questions:
+                    questions = questions['quiz']
+                else:
+                    questions = [questions]
+            
+            # If still not a list, try to extract from response
+            if not isinstance(questions, list):
+                # Try to find array in response text
+                import re
+                json_match = re.search(r'\[.*\]', response, re.DOTALL)
+                if json_match:
+                    try:
+                        questions = json.loads(json_match.group())
+                    except:
+                        pass
             
             # Validate and format questions
             validated_questions = []
-            for q in questions:
-                if isinstance(q, dict) and 'question' in q and 'options' in q:
-                    # Ensure correct_answer is an integer
-                    correct_idx = q.get('correct_answer', 0)
-                    if isinstance(correct_idx, str):
-                        # Try to convert
-                        try:
-                            correct_idx = int(correct_idx)
-                        except:
-                            correct_idx = 0
-                    
-                    validated_questions.append({
-                        "question": q['question'],
-                        "options": q['options'][:4],  # Ensure exactly 4 options
-                        "correct_answer": correct_idx,
-                        "explanation": q.get('explanation', ''),
-                        "difficulty": difficulty
-                    })
+            if isinstance(questions, list):
+                for q in questions:
+                    if isinstance(q, dict):
+                        # Check for question in various formats
+                        question_text = q.get('question') or q.get('q') or q.get('Question')
+                        options = q.get('options') or q.get('Options') or q.get('choices')
+                        
+                        if question_text and options and isinstance(options, list) and len(options) >= 2:
+                            # Ensure correct_answer is an integer
+                            correct_idx = q.get('correct_answer', q.get('correctAnswer', q.get('answer', 0)))
+                            if isinstance(correct_idx, str):
+                                # Try to convert
+                                try:
+                                    correct_idx = int(correct_idx)
+                                except:
+                                    # Try to find index of correct answer in options
+                                    correct_idx = 0
+                                    for idx, opt in enumerate(options):
+                                        if opt == correct_idx or str(opt).lower() == str(correct_idx).lower():
+                                            correct_idx = idx
+                                            break
+                            
+                            validated_questions.append({
+                                "question": str(question_text).strip(),
+                                "options": [str(opt).strip() for opt in options[:4]],  # Ensure exactly 4 options
+                                "correct_answer": min(correct_idx, len(options[:4]) - 1),  # Ensure valid index
+                                "explanation": str(q.get('explanation', q.get('Explanation', ''))).strip(),
+                                "difficulty": difficulty
+                            })
             
             if not validated_questions:
-                raise ValueError("No valid questions generated from response")
+                # Last resort: try to extract from text
+                raise ValueError(f"No valid questions generated. LLM response: {response[:200]}...")
             
             return validated_questions
         
@@ -104,18 +133,51 @@ class QuizAgent:
         """
         all_questions = []
         
+        if not chunks:
+            raise ValueError("No chunks provided for quiz generation")
+        
+        # Filter out empty or very short chunks
+        valid_chunks = [chunk for chunk in chunks if chunk and len(chunk.strip()) > 100]
+        
+        if not valid_chunks:
+            raise ValueError("No valid chunks found. Chunks must be at least 100 characters long.")
+        
         # Limit chunks to avoid timeout
-        chunks_to_process = chunks[:max_chunks]
+        chunks_to_process = valid_chunks[:max_chunks]
         
         for i, chunk in enumerate(chunks_to_process):
             try:
+                # Ensure chunk has enough content
+                if len(chunk.strip()) < 100:
+                    continue
+                    
                 questions = self.generate_quiz(chunk, num_questions=2, difficulty=difficulty)
-                for q in questions:
-                    q['chunk_id'] = i
-                all_questions.extend(questions)
+                
+                if questions and len(questions) > 0:
+                    for q in questions:
+                        q['chunk_id'] = i
+                    all_questions.extend(questions)
+                else:
+                    # Try with a simpler prompt if first attempt failed
+                    try:
+                        questions = self.generate_quiz(chunk, num_questions=1, difficulty=difficulty)
+                        if questions:
+                            for q in questions:
+                                q['chunk_id'] = i
+                            all_questions.extend(questions)
+                    except:
+                        pass
+                        
             except Exception as e:
-                print(f"Error processing chunk {i}: {str(e)}")
-                continue  # Skip this chunk and continue
+                error_msg = str(e)
+                # Don't silently fail - log the error
+                import sys
+                print(f"Error processing chunk {i}: {error_msg}", file=sys.stderr)
+                # Continue with next chunk
+                continue
+        
+        if not all_questions:
+            raise ValueError(f"Failed to generate quiz questions from {len(chunks_to_process)} chunks. The content might be too short or the API returned invalid responses.")
         
         return all_questions
     
