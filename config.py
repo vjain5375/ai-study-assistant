@@ -25,8 +25,8 @@ if GEMINI_API_KEY:
 GEMINI_MODEL = "gemini-1.5-flash"  # Fast and efficient for Reader
 GROQ_MODEL = "llama-3.1-70b-versatile"  # Groq LLaMA 3.1 70B for Flashcard & Planner
 # Alternative Groq models: llama-3.1-8b-instant, llama-3.3-70b-versatile, mixtral-8x7b-32768
-DEEPSEEK_MODEL = "deepseek-chat"  # Default DeepSeek model
-# Alternative DeepSeek models: deepseek-chat, deepseek-reasoner, DeepSeek-R1-distill-LLaMA
+DEEPSEEK_MODEL = "DeepSeek-R1-distill-LLaMA"  # Default DeepSeek model (R1 distill)
+# Alternative DeepSeek models: deepseek-chat, deepseek-reasoner
 
 # Embedding Configuration
 EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"  # bge-large for FAISS embeddings
