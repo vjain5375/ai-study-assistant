@@ -72,18 +72,15 @@ def get_llm(provider: str = "gemini", model_name: str = None, temperature: float
                         groq_api_key=config.GROQ_API_KEY
                     )
                     # Test if it works by trying to create it
-                    print(f"✅ Groq model initialized: {model_attempt}")
                     return llm
                 except Exception as e:
                     error_str = str(e)
                     last_error = e
                     # If it's a 404 or model not found, try next model
                     if "404" in error_str or "not found" in error_str.lower() or "model" in error_str.lower():
-                        print(f"⚠️ Model {model_attempt} not available, trying next...")
                         continue
                     else:
                         # Other error (might be API key, quota, etc.) - try this model anyway
-                        print(f"⚠️ Error with {model_attempt}: {error_str}, but trying to use it...")
                         try:
                             return ChatGroq(
                                 model=model_attempt,
@@ -123,13 +120,11 @@ def get_llm(provider: str = "gemini", model_name: str = None, temperature: float
                         openai_api_key=config.DEEPSEEK_API_KEY,
                         base_url="https://api.deepseek.com/v1"
                     )
-                    print(f"✅ DeepSeek model initialized: {model_attempt}")
                     return llm
                 except Exception as e:
                     error_str = str(e)
                     last_error = e
                     if "404" in error_str or "not found" in error_str.lower():
-                        print(f"⚠️ Model {model_attempt} not available, trying next...")
                         continue
                     else:
                         # Try with the model anyway

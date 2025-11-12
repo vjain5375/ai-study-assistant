@@ -44,10 +44,8 @@ class ChatAgent:
                 if "balance" in error_str.lower() or "insufficient" in error_str.lower() or "402" in error_str:
                     # Try Groq first, then Gemini
                     try:
-                        print("[DEBUG] DeepSeek balance issue, trying Groq...")
                         answer = call_llm(prompt, provider="groq")
                     except:
-                        print("[DEBUG] Groq failed, trying Gemini...")
                         answer = call_llm(prompt, provider="gemini")
                 else:
                     # Other error, try Groq then Gemini

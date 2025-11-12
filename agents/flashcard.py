@@ -34,17 +34,13 @@ class FlashcardAgent:
         
         try:
             # Flashcard agent uses Groq LLaMA 3.1 70B
-            print(f"[DEBUG] Calling Groq API for flashcards...")
             response = call_llm(prompt, provider="groq")
-            print(f"[DEBUG] Got response, length: {len(response) if response else 0}")
             
             # Debug: Print response for troubleshooting
             if not response or len(response.strip()) == 0:
                 raise ValueError("Empty response from LLM")
             
-            print(f"[DEBUG] Parsing JSON response...")
             flashcards = parse_json_response(response)
-            print(f"[DEBUG] Parsed {len(flashcards) if isinstance(flashcards, list) else 'unknown'} items")
             
             # Ensure it's a list
             if isinstance(flashcards, dict):
