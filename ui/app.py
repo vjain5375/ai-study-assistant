@@ -157,15 +157,30 @@ def flashcards_page():
     
     # Generate flashcards
     if st.button("✨ Generate Flashcards", type="primary"):
-        with st.spinner("Generating flashcards..."):
-            chunks = st.session_state.processed_content.get('chunks', [])
-            if chunks:
-                flashcards = st.session_state.flashcard_agent.generate_from_chunks(chunks)
-                st.session_state.flashcards = flashcards
-                st.session_state.flashcard_agent.save_flashcards(flashcards)
-                st.success(f"✅ Generated {len(flashcards)} flashcards!")
-            else:
-                st.error("No content chunks available. Please process a file first.")
+        try:
+            with st.spinner("Generating flashcards... This may take 30-60 seconds..."):
+                chunks = st.session_state.processed_content.get('chunks', [])
+                if chunks:
+                    # Limit to first 5 chunks to avoid timeout
+                    num_chunks = min(5, len(chunks))
+                    st.info(f"Processing {num_chunks} chunks (out of {len(chunks)} total)...")
+                    
+                    flashcards = st.session_state.flashcard_agent.generate_from_chunks(chunks, max_chunks=5)
+                    st.session_state.flashcards = flashcards
+                    st.session_state.flashcard_agent.save_flashcards(flashcards)
+                    st.success(f"✅ Generated {len(flashcards)} flashcards!")
+                    st.rerun()
+                else:
+                    st.error("No content chunks available. Please process a file first.")
+        except TimeoutError as e:
+            st.error(f"⏱️ {str(e)}")
+            st.info("💡 Try processing a smaller PDF or wait a moment and try again.")
+        except ValueError as e:
+            st.error(f"🔑 {str(e)}")
+            st.info("💡 Please check your OpenAI API key in the sidebar.")
+        except Exception as e:
+            st.error(f"❌ Error generating flashcards: {str(e)}")
+            st.info("💡 Please try again or check your API key and internet connection.")
     
     # Display flashcards
     if st.session_state.flashcards:
@@ -236,28 +251,37 @@ def quizzes_page():
     
     # Generate quiz
     if st.button("✨ Generate Quiz", type="primary"):
-        with st.spinner("Generating quiz questions..."):
-            chunks = st.session_state.processed_content.get('chunks', [])
-            if chunks:
-                # Generate questions from first few chunks
-                selected_chunks = chunks[:min(3, len(chunks))]
-                questions = []
-                for chunk in selected_chunks:
-                    qs = st.session_state.quiz_agent.generate_quiz(
-                        chunk,
-                        num_questions=num_questions // len(selected_chunks) + 1,
-                        difficulty=difficulty
+        try:
+            with st.spinner("Generating quiz questions... This may take 30-60 seconds..."):
+                chunks = st.session_state.processed_content.get('chunks', [])
+                if chunks:
+                    # Limit to first 3 chunks to avoid timeout
+                    num_chunks = min(3, len(chunks))
+                    st.info(f"Processing {num_chunks} chunks (out of {len(chunks)} total)...")
+                    
+                    questions = st.session_state.quiz_agent.generate_from_chunks(
+                        chunks, 
+                        difficulty=difficulty,
+                        max_chunks=3
                     )
-                    questions.extend(qs)
-                
-                st.session_state.quizzes = questions[:num_questions]
-                st.session_state.quiz_agent.save_quiz(st.session_state.quizzes)
-                st.session_state.quiz_answers = {}
-                st.session_state.quiz_results = {}
-                st.success(f"✅ Generated {len(st.session_state.quizzes)} quiz questions!")
-                st.rerun()
-            else:
-                st.error("No content chunks available. Please process a file first.")
+                    
+                    st.session_state.quizzes = questions[:num_questions]
+                    st.session_state.quiz_agent.save_quiz(st.session_state.quizzes)
+                    st.session_state.quiz_answers = {}
+                    st.session_state.quiz_results = {}
+                    st.success(f"✅ Generated {len(st.session_state.quizzes)} quiz questions!")
+                    st.rerun()
+                else:
+                    st.error("No content chunks available. Please process a file first.")
+        except TimeoutError as e:
+            st.error(f"⏱️ {str(e)}")
+            st.info("💡 Try processing a smaller PDF or wait a moment and try again.")
+        except ValueError as e:
+            st.error(f"🔑 {str(e)}")
+            st.info("💡 Please check your OpenAI API key in the sidebar.")
+        except Exception as e:
+            st.error(f"❌ Error generating quiz: {str(e)}")
+            st.info("💡 Please try again or check your API key and internet connection.")
     
     # Display quiz
     if st.session_state.quizzes:

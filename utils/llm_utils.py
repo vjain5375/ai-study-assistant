@@ -38,7 +38,7 @@ def get_llm(model_name: str = None, temperature: float = 0.7):
         )
 
 
-def call_llm(prompt: str, system_message: str = None, model_name: str = None) -> str:
+def call_llm(prompt: str, system_message: str = None, model_name: str = None, timeout: int = 60) -> str:
     """
     Call LLM with a prompt and return the response.
     
@@ -46,23 +46,37 @@ def call_llm(prompt: str, system_message: str = None, model_name: str = None) ->
         prompt: User prompt
         system_message: Optional system message
         model_name: Model to use
+        timeout: Timeout in seconds (default: 60)
         
     Returns:
         LLM response text
     """
-    llm = get_llm(model_name=model_name)
-    
-    messages = []
-    if system_message:
-        messages.append(SystemMessage(content=system_message))
-    messages.append(HumanMessage(content=prompt))
-    
-    response = llm.invoke(messages)
-    
-    # Handle different response types
-    if hasattr(response, 'content'):
-        return response.content
-    return str(response)
+    try:
+        llm = get_llm(model_name=model_name)
+        
+        # Set timeout if supported
+        if hasattr(llm, 'timeout'):
+            llm.timeout = timeout
+        
+        messages = []
+        if system_message:
+            messages.append(SystemMessage(content=system_message))
+        messages.append(HumanMessage(content=prompt))
+        
+        response = llm.invoke(messages)
+        
+        # Handle different response types
+        if hasattr(response, 'content'):
+            return response.content
+        return str(response)
+    except Exception as e:
+        error_msg = str(e)
+        if "timeout" in error_msg.lower() or "timed out" in error_msg.lower():
+            raise TimeoutError(f"LLM request timed out after {timeout} seconds. Try with fewer chunks or smaller text.")
+        elif "api" in error_msg.lower() and "key" in error_msg.lower():
+            raise ValueError("Invalid or missing OpenAI API key. Please check your API key in the sidebar.")
+        else:
+            raise Exception(f"Error calling LLM: {error_msg}")
 
 
 def parse_json_response(response: str) -> Any:

@@ -71,24 +71,32 @@ class QuizAgent:
             print(f"Error generating quiz: {str(e)}")
             return []
     
-    def generate_from_chunks(self, chunks: List[str], difficulty: str = "Medium") -> List[Dict]:
+    def generate_from_chunks(self, chunks: List[str], difficulty: str = "Medium", max_chunks: int = 3) -> List[Dict]:
         """
         Generate quiz questions from multiple text chunks.
         
         Args:
             chunks: List of text chunks
             difficulty: Difficulty level
+            max_chunks: Maximum number of chunks to process (to avoid timeouts)
             
         Returns:
             Combined list of quiz questions
         """
         all_questions = []
         
-        for i, chunk in enumerate(chunks):
-            questions = self.generate_quiz(chunk, num_questions=2, difficulty=difficulty)
-            for q in questions:
-                q['chunk_id'] = i
-            all_questions.extend(questions)
+        # Limit chunks to avoid timeout
+        chunks_to_process = chunks[:max_chunks]
+        
+        for i, chunk in enumerate(chunks_to_process):
+            try:
+                questions = self.generate_quiz(chunk, num_questions=2, difficulty=difficulty)
+                for q in questions:
+                    q['chunk_id'] = i
+                all_questions.extend(questions)
+            except Exception as e:
+                print(f"Error processing chunk {i}: {str(e)}")
+                continue  # Skip this chunk and continue
         
         return all_questions
     

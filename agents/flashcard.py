@@ -56,23 +56,31 @@ class FlashcardAgent:
             print(f"Error generating flashcards: {str(e)}")
             return []
     
-    def generate_from_chunks(self, chunks: List[str]) -> List[Dict]:
+    def generate_from_chunks(self, chunks: List[str], max_chunks: int = 5) -> List[Dict]:
         """
         Generate flashcards from multiple text chunks.
         
         Args:
             chunks: List of text chunks
+            max_chunks: Maximum number of chunks to process (to avoid timeouts)
             
         Returns:
             Combined list of flashcards
         """
         all_flashcards = []
         
-        for i, chunk in enumerate(chunks):
-            flashcards = self.generate_flashcards(chunk, num_flashcards=3)
-            for card in flashcards:
-                card['chunk_id'] = i
-            all_flashcards.extend(flashcards)
+        # Limit chunks to avoid timeout
+        chunks_to_process = chunks[:max_chunks]
+        
+        for i, chunk in enumerate(chunks_to_process):
+            try:
+                flashcards = self.generate_flashcards(chunk, num_flashcards=3)
+                for card in flashcards:
+                    card['chunk_id'] = i
+                all_flashcards.extend(flashcards)
+            except Exception as e:
+                print(f"Error processing chunk {i}: {str(e)}")
+                continue  # Skip this chunk and continue
         
         return all_flashcards
     
