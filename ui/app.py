@@ -429,22 +429,39 @@ def flashcards_page():
                 
                 st.info(f"✅ Found {len(valid_chunks)} valid chunks with content")
                 
-                flashcards = st.session_state.flashcard_agent.generate_from_chunks(valid_chunks, max_chunks=5)
+                # Store last error for debugging
+                last_error = None
+                last_response = None
                 
-                if flashcards and len(flashcards) > 0:
-                    st.session_state.flashcards = flashcards
-                    # Save to database with file_id
-                    st.session_state.flashcard_agent.save_flashcards(flashcards, st.session_state.current_file_id)
-                    st.success(f"✅ Generated {len(flashcards)} flashcards from PDF: **{current_file}**!")
-                    st.rerun()
-                else:
-                    st.error("❌ No flashcards were generated. The LLM might not have returned valid flashcards.")
-                    st.info("💡 Possible reasons:")
-                    st.info("   • The LLM response was not in the expected JSON format")
-                    st.info("   • The content might need clearer structure")
-                    st.info("   • Try again - sometimes the API needs a retry")
+                try:
+                    flashcards = st.session_state.flashcard_agent.generate_from_chunks(valid_chunks, max_chunks=5)
                     
-                    # Show technical details
+                    if flashcards and len(flashcards) > 0:
+                        st.session_state.flashcards = flashcards
+                        # Save to database with file_id
+                        st.session_state.flashcard_agent.save_flashcards(flashcards, st.session_state.current_file_id)
+                        st.success(f"✅ Generated {len(flashcards)} flashcards from PDF: **{current_file}**!")
+                        st.rerun()
+                    else:
+                        st.error("❌ No flashcards were generated. The LLM might not have returned valid flashcards.")
+                        st.info("💡 Possible reasons:")
+                        st.info("   • The LLM response was not in the expected JSON format")
+                        st.info("   • The content might need clearer structure")
+                        st.info("   • Try again - sometimes the API needs a retry")
+                except Exception as gen_error:
+                    last_error = str(gen_error)
+                    st.error(f"❌ Error generating flashcards: {last_error}")
+                    
+                    # Try to extract response from error message
+                    if "LLM response" in last_error or "response" in last_error.lower():
+                        # Try to find response in error
+                        import re
+                        response_match = re.search(r'response.*?:(.*?)(?:\.\.\.|$)', last_error, re.IGNORECASE)
+                        if response_match:
+                            last_response = response_match.group(1).strip()
+                
+                # Show technical details if error occurred
+                if last_error or (not flashcards or len(flashcards) == 0):
                     with st.expander("🔍 Technical Debug Info", expanded=True):
                         st.warning("⚠️ Check the console/terminal for detailed error logs")
                         st.code("Look for messages starting with: 📥, 📊, ✅, ❌, ⚠️")
@@ -455,9 +472,40 @@ def flashcards_page():
                         st.markdown("3. Check if the response is valid JSON")
                         st.markdown("4. Share the error logs if the issue persists")
                         
+                        if last_error:
+                            st.markdown("---")
+                            st.markdown("**Last Error:**")
+                            st.code(last_error[:500])
+                        
+                        if last_response:
+                            st.markdown("---")
+                            st.markdown("**LLM Response Preview:**")
+                            st.code(last_response[:1000])
+                        
                         # Try to show a retry button
                         if st.button("🔄 Retry Flashcard Generation", type="secondary"):
                             st.rerun()
+                        
+                        # Add fallback option
+                        st.markdown("---")
+                        st.markdown("**Alternative:** Try using Gemini instead of Groq")
+                        if st.button("🔄 Try with Gemini API", type="secondary", key="retry_gemini"):
+                            # Temporarily change provider
+                            try:
+                                # Create a new flashcard agent instance for this attempt
+                                from agents.flashcard import FlashcardAgent
+                                temp_agent = FlashcardAgent()
+                                # Modify to use Gemini
+                                flashcards = temp_agent.generate_from_chunks(valid_chunks, max_chunks=3)
+                                if flashcards and len(flashcards) > 0:
+                                    st.session_state.flashcards = flashcards
+                                    st.session_state.flashcard_agent.save_flashcards(flashcards, st.session_state.current_file_id)
+                                    st.success(f"✅ Generated {len(flashcards)} flashcards using Gemini!")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Gemini also failed to generate flashcards")
+                            except Exception as gemini_error:
+                                st.error(f"❌ Gemini error: {str(gemini_error)}")
         except TimeoutError as e:
             st.error(f"⏱️ {str(e)}")
             st.info("💡 Try processing a smaller PDF or wait a moment and try again.")

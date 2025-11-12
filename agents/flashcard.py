@@ -39,7 +39,16 @@ class FlashcardAgent:
         
         try:
             # Flashcard agent uses Groq LLaMA 3.1 70B
-            response = call_llm(prompt, provider="groq")
+            # Try Groq first, fallback to Gemini if Groq fails
+            try:
+                response = call_llm(prompt, provider="groq")
+            except Exception as groq_error:
+                error_str = str(groq_error)
+                print(f"⚠️ Groq failed: {error_str}")
+                print("🔄 Trying Gemini as fallback...")
+                # Fallback to Gemini
+                response = call_llm(prompt, provider="gemini")
+                print("✅ Using Gemini response")
             
             # Debug: Print response for troubleshooting
             if not response or len(response.strip()) == 0:
@@ -193,6 +202,40 @@ class FlashcardAgent:
                                 print(f"❌ Still no flashcards from chunk {i+1} after retry")
                         except Exception as retry_error:
                             print(f"❌ Retry failed for chunk {i+1}: {str(retry_error)}")
+                            # Try with Gemini as last resort
+                            try:
+                                print(f"🔄 Trying Gemini for chunk {i+1}...")
+                                from utils.llm_utils import call_llm
+                                from utils.prompts import FLASHCARD_PROMPT
+                                prompt = FLASHCARD_PROMPT.format(
+                                    text=chunk[:4000],
+                                    num_flashcards=2
+                                )
+                                prompt += "\n\nIMPORTANT: Keep answers SHORT (1-2 sentences max). Think sticky notes, not essays! Focus on key points only."
+                                response = call_llm(prompt, provider="gemini")
+                                from utils.llm_utils import parse_json_response
+                                flashcards = parse_json_response(response)
+                                # Process flashcards same way
+                                if isinstance(flashcards, dict):
+                                    if 'flashcards' in flashcards:
+                                        flashcards = flashcards['flashcards']
+                                    elif 'questions' in flashcards:
+                                        flashcards = flashcards['questions']
+                                if isinstance(flashcards, list) and len(flashcards) > 0:
+                                    validated = []
+                                    for card in flashcards:
+                                        if isinstance(card, dict):
+                                            q = card.get('question') or card.get('q')
+                                            a = card.get('answer') or card.get('a')
+                                            if q and a:
+                                                validated.append({"question": str(q).strip(), "answer": str(a).strip()})
+                                    if validated:
+                                        print(f"✅ Generated {len(validated)} flashcards from chunk {i+1} using Gemini")
+                                        for card in validated:
+                                            card['chunk_id'] = i
+                                        all_flashcards.extend(validated)
+                            except Exception as gemini_error:
+                                print(f"❌ Gemini also failed for chunk {i+1}: {str(gemini_error)}")
                 except Exception as gen_error:
                     print(f"❌ Error generating flashcards from chunk {i+1}: {str(gen_error)}")
                     # Try one more time with a very simple request

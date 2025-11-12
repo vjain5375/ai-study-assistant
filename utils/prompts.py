@@ -1,33 +1,26 @@
 """Prompt templates for different agents"""
 
-FLASHCARD_PROMPT = """You are a flashcard generator for students. Create SHORT sticky-note style flashcards with key points.
+FLASHCARD_PROMPT = """You are a flashcard generator. Create {num_flashcards} short flashcards from the text.
 
-Study Material:
+Text:
 {text}
 
-Instructions:
-1. Create EXACTLY {num_flashcards} flashcards from the provided text
-2. Make them SHORT like sticky notes - maximum 1-2 sentences per answer
-3. Focus on KEY POINTS, definitions, and important facts
-4. Questions should be brief and direct
-5. Answers should be concise bullet points or short phrases
-6. Each flashcard = one key concept or fact
+Rules:
+- Create EXACTLY {num_flashcards} flashcards
+- Each flashcard has "question" and "answer" fields
+- Answers must be SHORT (1-2 sentences max)
+- Focus on key points and definitions
+- Questions should be brief
 
-CRITICAL: You MUST return ONLY a valid JSON array. No explanations, no markdown, no code blocks. Just the JSON array.
+CRITICAL: Return ONLY a valid JSON array. No markdown, no code blocks, no explanations.
 
-Return your response as a JSON array with this exact format:
+Format (JSON array only):
 [
-  {{
-    "question": "What is...?",
-    "answer": "Short key point (1-2 sentences max)"
-  }},
-  {{
-    "question": "Another question?",
-    "answer": "Another short answer"
-  }}
+  {{"question": "What is X?", "answer": "X is Y."}},
+  {{"question": "What is Z?", "answer": "Z is W."}}
 ]
 
-IMPORTANT: Return ONLY the JSON array. Start with [ and end with ]. No ```json, no markdown, no explanations."""
+Return ONLY the JSON array starting with [ and ending with ]."""
 
 
 QUIZ_PROMPT = """You are a quiz generator for students. Create multiple-choice questions from the study material.
