@@ -362,23 +362,84 @@ def flashcards_page():
                         st.error(f"❌ Error processing file: {str(e)}")
             return
     
+    # Show current file info if processed
+    if st.session_state.processed_content:
+        current_file = st.session_state.processed_content.get('file_name', 'Unknown')
+        chunks = st.session_state.processed_content.get('chunks', [])
+        num_chunks_available = len(chunks)
+        
+        # Show file info
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("📄 File", current_file)
+        with col2:
+            st.metric("📦 Chunks", num_chunks_available)
+        with col3:
+            total_chars = sum(len(chunk) for chunk in chunks) if chunks else 0
+            st.metric("📝 Total Text", f"{total_chars:,} chars")
+        
+        # Debug: Show chunk details
+        if chunks:
+            with st.expander("🔍 Debug: View Chunk Details", expanded=False):
+                for i, chunk in enumerate(chunks[:3]):  # Show first 3 chunks
+                    st.markdown(f"**Chunk {i+1}:** ({len(chunk)} characters)")
+                    st.text(chunk[:200] + "..." if len(chunk) > 200 else chunk)
+                    st.markdown("---")
+        
+        # Option to load existing flashcards from database
+        if st.session_state.current_file_id:
+            existing_flashcards = st.session_state.flashcard_agent.load_flashcards(st.session_state.current_file_id)
+            if existing_flashcards and len(existing_flashcards) > 0:
+                if st.button("📥 Load Existing Flashcards from Database", key="load_flashcards"):
+                    st.session_state.flashcards = existing_flashcards
+                    st.success(f"✅ Loaded {len(existing_flashcards)} flashcards from database!")
+                    st.rerun()
+    
     # Generate flashcards
     if st.button("✨ Generate Flashcards", type="primary"):
         try:
-            with st.spinner("Generating flashcards... This may take 30-60 seconds..."):
-                chunks = st.session_state.processed_content.get('chunks', [])
+            # Check if processed content exists
+            if st.session_state.processed_content is None:
+                st.error("❌ No file processed yet! Please upload and process a file first.")
+                return
+            
+            chunks = st.session_state.processed_content.get('chunks', [])
+            if not chunks or len(chunks) == 0:
+                st.error("❌ No content chunks available. The PDF might be empty or not properly extracted.")
+                st.info("💡 Try uploading the file again or check if the PDF has readable text.")
+                return
+            
+            # Show chunk preview for debugging
+            with st.expander("🔍 Preview: First Chunk Content", expanded=False):
                 if chunks:
-                    # Limit to first 5 chunks to avoid timeout
-                    num_chunks = min(5, len(chunks))
-                    st.info(f"Processing {num_chunks} chunks (out of {len(chunks)} total)...")
-                    
-                    flashcards = st.session_state.flashcard_agent.generate_from_chunks(chunks, max_chunks=5)
+                    preview = chunks[0][:500] if len(chunks[0]) > 500 else chunks[0]
+                    st.text(preview)
+                    st.caption(f"Chunk length: {len(chunks[0])} characters")
+            
+            with st.spinner("Generating flashcards... This may take 30-60 seconds..."):
+                # Limit to first 5 chunks to avoid timeout
+                num_chunks = min(5, len(chunks))
+                st.info(f"🔄 Processing {num_chunks} chunks (out of {len(chunks)} total)...")
+                
+                # Verify chunks have content
+                valid_chunks = [chunk for chunk in chunks[:num_chunks] if chunk and len(chunk.strip()) > 50]
+                if not valid_chunks:
+                    st.error("❌ All chunks are too short or empty. Cannot generate flashcards.")
+                    return
+                
+                st.info(f"✅ Found {len(valid_chunks)} valid chunks with content")
+                
+                flashcards = st.session_state.flashcard_agent.generate_from_chunks(valid_chunks, max_chunks=5)
+                
+                if flashcards and len(flashcards) > 0:
                     st.session_state.flashcards = flashcards
-                    st.session_state.flashcard_agent.save_flashcards(flashcards)
-                    st.success(f"✅ Generated {len(flashcards)} flashcards!")
+                    # Save to database with file_id
+                    st.session_state.flashcard_agent.save_flashcards(flashcards, st.session_state.current_file_id)
+                    st.success(f"✅ Generated {len(flashcards)} flashcards from PDF: **{current_file}**!")
                     st.rerun()
                 else:
-                    st.error("No content chunks available. Please process a file first.")
+                    st.error("❌ No flashcards were generated. The content might not be suitable for flashcard creation.")
+                    st.info("💡 Try with a different PDF or check if the content has clear concepts/topics.")
         except TimeoutError as e:
             st.error(f"⏱️ {str(e)}")
             st.info("💡 Try processing a smaller PDF or wait a moment and try again.")

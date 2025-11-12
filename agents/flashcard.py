@@ -125,7 +125,12 @@ class FlashcardAgent:
             try:
                 # Ensure chunk has enough content
                 if len(chunk.strip()) < 100:
+                    print(f"Skipping chunk {i}: too short ({len(chunk.strip())} chars)")
                     continue
+                
+                # Debug: Print chunk info
+                print(f"Processing chunk {i+1}/{len(chunks_to_process)}: {len(chunk)} characters")
+                print(f"Chunk preview: {chunk[:100]}...")
                     
                 flashcards = self.generate_flashcards(chunk, num_flashcards=3)
                 
