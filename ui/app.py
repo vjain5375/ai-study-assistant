@@ -104,6 +104,54 @@ def upload_page():
     """File upload and processing page"""
     st.header("📄 Upload Study Material")
     
+    # Show saved files section first
+    import config
+    if os.path.exists(config.UPLOAD_DIR):
+        pdf_files = glob.glob(os.path.join(config.UPLOAD_DIR, "*.pdf"))
+        if pdf_files:
+            st.subheader("📁 Saved Files")
+            cols = st.columns([3, 1])
+            with cols[0]:
+                selected_file = st.selectbox(
+                    "Select a saved file to process:",
+                    options=["-- Upload New File --"] + [os.path.basename(f) for f in sorted(pdf_files, key=os.path.getmtime, reverse=True)],
+                    key="saved_file_selector"
+                )
+            with cols[1]:
+                if selected_file and selected_file != "-- Upload New File --":
+                    if st.button("🔄 Process Selected File", type="primary"):
+                        file_path = os.path.join(config.UPLOAD_DIR, selected_file)
+                        if os.path.exists(file_path):
+                            with st.spinner("Processing saved file..."):
+                                try:
+                                    # Create a file-like object from saved file
+                                    class SavedFile:
+                                        def __init__(self, path):
+                                            self.name = os.path.basename(path)
+                                            self.path = path
+                                        def getbuffer(self):
+                                            with open(self.path, 'rb') as f:
+                                                return f.read()
+                                    
+                                    saved_file_obj = SavedFile(file_path)
+                                    content = st.session_state.reader_agent.process_file(saved_file_obj)
+                                    st.session_state.processed_content = content
+                                    st.success(f"✅ File '{selected_file}' processed successfully!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"❌ Error processing file: {str(e)}")
+            
+            # Show file list
+            with st.expander("📋 View All Saved Files", expanded=False):
+                for pdf_file in sorted(pdf_files, key=os.path.getmtime, reverse=True):
+                    file_name = os.path.basename(pdf_file)
+                    file_size = os.path.getsize(pdf_file) / 1024
+                    mod_time = datetime.fromtimestamp(os.path.getmtime(pdf_file))
+                    st.caption(f"📄 {file_name} ({file_size:.2f} KB) - Saved: {mod_time.strftime('%Y-%m-%d %H:%M')}")
+    
+    st.markdown("---")
+    st.subheader("📤 Upload New File")
+    
     uploaded_file = st.file_uploader(
         "Upload your PDF notes, slides, or study material",
         type=['pdf'],
@@ -177,16 +225,24 @@ def upload_page():
                                 st.caption(f"... and {len(chunks) - 5} more chunks")
                     
                     # Show saved file location
-                    import config
                     saved_file_path = os.path.join(config.UPLOAD_DIR, uploaded_file.name)
-                    if os.path.exists(saved_file_path):
-                        st.success(f"💾 File saved to: `{saved_file_path}`")
-                    else:
+                    if not os.path.exists(saved_file_path):
                         # Check if file was saved with timestamp
                         pattern = os.path.join(config.UPLOAD_DIR, f"{os.path.splitext(uploaded_file.name)[0]}*.pdf")
                         matches = glob.glob(pattern)
                         if matches:
-                            st.success(f"💾 File saved to: `{matches[-1]}`")
+                            saved_file_path = matches[-1]
+                    
+                    if os.path.exists(saved_file_path):
+                        st.success(f"💾 File saved successfully to: `{saved_file_path}`")
+                        st.info("💡 You can now navigate to Flashcards or Quizzes pages. The file is saved and can be reprocessed anytime!")
+                    
+                    # Store file info in session state
+                    st.session_state.last_processed_file = {
+                        "name": uploaded_file.name,
+                        "path": saved_file_path if os.path.exists(saved_file_path) else None,
+                        "processed": True
+                    }
                     
                     # Auto-generate flashcards and quizzes
                     st.info("💡 Tip: Navigate to Flashcards and Quizzes pages to generate study materials!")
@@ -196,18 +252,22 @@ def upload_page():
                     st.info("Make sure you have set your API keys in Streamlit Cloud Secrets or .env file.")
     
     else:
-        st.info("👆 Please upload a PDF file to get started")
-        
-        # Show previously uploaded files
-        import config
-        if os.path.exists(config.UPLOAD_DIR):
-            pdf_files = glob.glob(os.path.join(config.UPLOAD_DIR, "*.pdf"))
-            if pdf_files:
-                st.subheader("📁 Previously Uploaded Files")
-                for pdf_file in sorted(pdf_files, key=os.path.getmtime, reverse=True)[:5]:
-                    file_name = os.path.basename(pdf_file)
-                    file_size = os.path.getsize(pdf_file) / 1024
-                    st.caption(f"📄 {file_name} ({file_size:.2f} KB)")
+        # Show status if content is already processed
+        if st.session_state.processed_content is not None:
+            st.success("✅ You have processed content available!")
+            st.info("💡 You can generate flashcards and quizzes. Or upload a new file to process.")
+            
+            # Show current processed file info
+            current_file = st.session_state.processed_content.get('file_name', 'Unknown')
+            st.caption(f"📄 Currently processed: {current_file}")
+            
+            if st.button("🔄 Clear Processed Content"):
+                st.session_state.processed_content = None
+                st.session_state.flashcards = []
+                st.session_state.quizzes = []
+                st.rerun()
+        else:
+            st.info("👆 Please upload a PDF file or select a saved file to get started")
 
 
 def flashcards_page():
