@@ -25,10 +25,19 @@ class ReaderAgent:
             Dictionary with extracted content and metadata
         """
         # Extract raw text
+        print(f"\n{'='*60}")
+        print(f"READER AGENT: PROCESSING FILE")
+        print(f"{'='*60}")
+        print(f"File name: {uploaded_file.name}")
+        
         raw_text = extract_text_from_uploaded_file(uploaded_file)
+        print(f"Raw text extracted: {len(raw_text)} characters")
+        print(f"Raw text preview: {raw_text[:200]}...")
         
         # Clean text
         cleaned_text = clean_text(raw_text)
+        print(f"Cleaned text: {len(cleaned_text)} characters")
+        print(f"Cleaned text preview: {cleaned_text[:200]}...")
         
         # Split into chunks
         chunks = split_into_chunks(
@@ -36,18 +45,22 @@ class ReaderAgent:
             chunk_size=self.chunk_size,
             overlap=self.chunk_overlap
         )
+        print(f"Split into {len(chunks)} chunks")
+        print(f"Chunk sizes: {[len(c) for c in chunks[:5]]}")
         
         # Identify topics
         topics = self._identify_topics(cleaned_text)
+        print(f"Identified {len(topics)} topics")
         
         # Add chunks to memory for semantic search
         try:
             metadata = [{"file_name": uploaded_file.name, "chunk_id": i} for i in range(len(chunks))]
             self.memory.add_documents(chunks, metadata)
+            print(f"Added {len(chunks)} chunks to memory")
         except Exception as e:
             print(f"Warning: Could not add documents to memory: {e}")
         
-        return {
+        result = {
             "raw_text": cleaned_text,
             "chunks": chunks,
             "topics": topics,
@@ -55,6 +68,13 @@ class ReaderAgent:
             "file_name": uploaded_file.name,
             "file_size": len(cleaned_text)
         }
+        
+        print(f"Returning processed content:")
+        print(f"   chunks count: {len(result['chunks'])}")
+        print(f"   chunks sample: {result['chunks'][0][:100] if result['chunks'] else 'N/A'}...")
+        print(f"{'='*60}\n")
+        
+        return result
     
     def _identify_topics(self, text: str) -> List[Dict]:
         """

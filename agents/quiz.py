@@ -39,16 +39,15 @@ class QuizAgent:
         prompt += f"\n\nDifficulty Level: {difficulty}. Adjust question complexity accordingly."
         
         try:
-            # Quiz agent uses DeepSeek V3/R1 (fallback to Groq if DeepSeek fails)
-            try:
-                response = call_llm(prompt, provider="deepseek")
-            except Exception as deepseek_error:
-                error_str = str(deepseek_error)
-                if "balance" in error_str.lower() or "insufficient" in error_str.lower() or "402" in error_str:
-                    # Fallback to Groq
-                    response = call_llm(prompt, provider="groq")
-                else:
-                    raise
+            # Quiz agent uses ONLY Gemini
+            if not config.GEMINI_API_KEY:
+                raise ValueError("GEMINI_API_KEY not set. Please set it in .env file or Streamlit Cloud Secrets")
+            
+            print(f"Calling LLM (Gemini) for quiz with prompt length: {len(prompt)} characters")
+            print(f"Text being sent to LLM: {text[:500]}...")
+            
+            response = call_llm(prompt, provider="gemini")
+            print(f"Gemini response received: {len(response) if response else 0} characters")
             
             # Debug: Check response
             if not response or len(response.strip()) == 0:

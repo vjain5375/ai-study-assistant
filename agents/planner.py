@@ -42,8 +42,13 @@ class PlannerAgent:
         )
         
         try:
-            # Planner agent uses Groq LLaMA 3.1 70B
-            response = call_llm(prompt, provider="groq")
+            # Planner agent uses ONLY Gemini
+            if not config.GEMINI_API_KEY:
+                raise ValueError("GEMINI_API_KEY not set. Please set it in .env file or Streamlit Cloud Secrets")
+            
+            print(f"Calling LLM (Gemini) for planner with prompt length: {len(prompt)} characters")
+            response = call_llm(prompt, provider="gemini")
+            print(f"Gemini response received: {len(response) if response else 0} characters")
             plan = parse_json_response(response)
             
             # Validate and enhance plan
