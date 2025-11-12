@@ -52,12 +52,12 @@ def get_llm(provider: str = "gemini", model_name: str = None, temperature: float
         try:
             from langchain_groq import ChatGroq
             
-            # Try different Groq models in order (most common first)
+            # Try different Groq models in order (llama-3.1-70b is decommissioned, use 8b-instant first)
             models_to_try = [
-                "llama-3.1-70b-versatile",  # Most common
-                "llama-3.3-70b-versatile",  # Newer version
-                "llama-3.1-8b-instant",     # Faster fallback
+                "llama-3.1-8b-instant",     # Fast and available
+                "llama-3.3-70b-versatile",  # Newer version (if available)
                 "mixtral-8x7b-32768",       # Alternative
+                "llama-3.1-70b-versatile",  # May be decommissioned
                 model_name or config.GROQ_MODEL  # User specified
             ]
             # Remove duplicates while preserving order

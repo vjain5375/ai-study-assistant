@@ -36,12 +36,25 @@ class ChatAgent:
         )
         
         try:
-            # Chat agent uses DeepSeek V3/R1 (fallback to Gemini if DeepSeek unavailable)
+            # Chat agent uses DeepSeek V3/R1 (fallback to Groq/Gemini if DeepSeek unavailable)
             try:
                 answer = call_llm(prompt, provider="deepseek")
-            except:
-                # Fallback to Gemini
-                answer = call_llm(prompt, provider="gemini")
+            except Exception as deepseek_error:
+                error_str = str(deepseek_error)
+                if "balance" in error_str.lower() or "insufficient" in error_str.lower() or "402" in error_str:
+                    # Try Groq first, then Gemini
+                    try:
+                        print("[DEBUG] DeepSeek balance issue, trying Groq...")
+                        answer = call_llm(prompt, provider="groq")
+                    except:
+                        print("[DEBUG] Groq failed, trying Gemini...")
+                        answer = call_llm(prompt, provider="gemini")
+                else:
+                    # Other error, try Groq then Gemini
+                    try:
+                        answer = call_llm(prompt, provider="groq")
+                    except:
+                        answer = call_llm(prompt, provider="gemini")
             
             # Store in conversation history
             self.conversation_history.append({

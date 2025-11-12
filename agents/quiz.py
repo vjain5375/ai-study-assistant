@@ -37,14 +37,27 @@ class QuizAgent:
         prompt += f"\n\nDifficulty Level: {difficulty}. Adjust question complexity accordingly."
         
         try:
-            # Quiz agent uses DeepSeek V3/R1
-            response = call_llm(prompt, provider="deepseek")
+            # Quiz agent uses DeepSeek V3/R1 (fallback to Groq if DeepSeek fails)
+            print(f"[DEBUG] Calling DeepSeek API for quiz...")
+            try:
+                response = call_llm(prompt, provider="deepseek")
+                print(f"[DEBUG] Got response, length: {len(response) if response else 0}")
+            except Exception as deepseek_error:
+                error_str = str(deepseek_error)
+                if "balance" in error_str.lower() or "insufficient" in error_str.lower() or "402" in error_str:
+                    print(f"[DEBUG] DeepSeek failed (balance issue), falling back to Groq...")
+                    response = call_llm(prompt, provider="groq")
+                    print(f"[DEBUG] Got Groq response, length: {len(response) if response else 0}")
+                else:
+                    raise
             
             # Debug: Check response
             if not response or len(response.strip()) == 0:
                 raise ValueError("Empty response from LLM")
             
+            print(f"[DEBUG] Parsing JSON response...")
             questions = parse_json_response(response)
+            print(f"[DEBUG] Parsed {len(questions) if isinstance(questions, list) else 'unknown'} items")
             
             # Ensure it's a list
             if isinstance(questions, dict):
