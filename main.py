@@ -19,8 +19,14 @@ if __name__ == "__main__":
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
     
     # Run streamlit app with custom address using python -m streamlit
-    cmd = f'python -m streamlit run ui/app.py --server.address {args.host} --server.port {args.port}'
+    # Add --server.fileWatcherType none to avoid path watcher errors
+    cmd = [
+        sys.executable, "-m", "streamlit", "run", "ui/app.py",
+        "--server.address", args.host,
+        "--server.port", str(args.port),
+        "--server.fileWatcherType", "none"  # Disable file watcher to avoid errors
+    ]
     print(f"Starting server on http://{args.host}:{args.port}")
     print(f"If host is 0.0.0.0, access via: http://localhost:{args.port}")
-    os.system(cmd)
+    subprocess.run(cmd)
 

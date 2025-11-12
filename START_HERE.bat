@@ -18,7 +18,7 @@ echo Starting Streamlit...
 echo.
 
 cd /d "%~dp0"
-python -m streamlit run ui/app.py --server.address 127.0.0.1 --server.port 8501
+python -m streamlit run ui/app.py --server.address 127.0.0.1 --server.port 8501 --server.fileWatcherType none
 
 pause
 

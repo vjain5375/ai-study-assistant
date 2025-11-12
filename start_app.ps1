@@ -21,6 +21,6 @@ Screenshot (62).pnghttp://127.0.0.1:8501" -ForegroundColor Yellow
 Write-Host "⏳ Please wait 10-15 seconds for the app to start..." -ForegroundColor Yellow
 Write-Host ""
 
-# Start the app
-python -m streamlit run ui/app.py --server.address 127.0.0.1 --server.port 8501
+# Start the app (disable file watcher to avoid errors)
+python -m streamlit run ui/app.py --server.address 127.0.0.1 --server.port 8501 --server.fileWatcherType none
 
