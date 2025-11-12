@@ -274,9 +274,33 @@ def flashcards_page():
     """Flashcards page"""
     st.header("🃏 Flashcards")
     
+    # Add upload option here too
     if st.session_state.processed_content is None:
-        st.warning("⚠️ Please upload and process a file first in the 'Upload & Process' page.")
-        return
+        st.warning("⚠️ No file processed yet. Upload and process a file below.")
+        
+        st.subheader("📤 Upload & Process File")
+        uploaded_file = st.file_uploader(
+            "Upload your PDF to generate flashcards",
+            type=['pdf'],
+            key="flashcard_uploader",
+            help="Upload a PDF file to process"
+        )
+        
+        if uploaded_file is not None:
+            st.success(f"✅ File uploaded: {uploaded_file.name}")
+            file_size = len(uploaded_file.getbuffer())
+            st.caption(f"File size: {file_size / 1024:.2f} KB")
+            
+            if st.button("🚀 Process File", type="primary", key="process_flashcard"):
+                with st.spinner("Processing your study material..."):
+                    try:
+                        content = st.session_state.reader_agent.process_file(uploaded_file)
+                        st.session_state.processed_content = content
+                        st.success("✅ File processed successfully! Now you can generate flashcards.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Error processing file: {str(e)}")
+            return
     
     # Generate flashcards
     if st.button("✨ Generate Flashcards", type="primary"):
@@ -423,9 +447,33 @@ def quizzes_page():
     """Quizzes page"""
     st.header("📝 Quizzes")
     
+    # Add upload option here too
     if st.session_state.processed_content is None:
-        st.warning("⚠️ Please upload and process a file first in the 'Upload & Process' page.")
-        return
+        st.warning("⚠️ No file processed yet. Upload and process a file below.")
+        
+        st.subheader("📤 Upload & Process File")
+        uploaded_file = st.file_uploader(
+            "Upload your PDF to generate quiz",
+            type=['pdf'],
+            key="quiz_uploader",
+            help="Upload a PDF file to process"
+        )
+        
+        if uploaded_file is not None:
+            st.success(f"✅ File uploaded: {uploaded_file.name}")
+            file_size = len(uploaded_file.getbuffer())
+            st.caption(f"File size: {file_size / 1024:.2f} KB")
+            
+            if st.button("🚀 Process File", type="primary", key="process_quiz"):
+                with st.spinner("Processing your study material..."):
+                    try:
+                        content = st.session_state.reader_agent.process_file(uploaded_file)
+                        st.session_state.processed_content = content
+                        st.success("✅ File processed successfully! Now you can generate quiz.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Error processing file: {str(e)}")
+            return
     
     # Quiz generation options
     col1, col2 = st.columns(2)
