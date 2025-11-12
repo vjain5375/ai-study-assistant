@@ -47,10 +47,12 @@ class FlashcardAgent:
             
             print(f"📥 LLM Response length: {len(response)} characters")
             print(f"📥 LLM Response preview: {response[:200]}...")
+            print(f"📥 LLM Full Response: {response}")
             
             flashcards = parse_json_response(response)
             
             print(f"📊 Parsed flashcards: {len(flashcards) if isinstance(flashcards, list) else 'Not a list'}")
+            print(f"📊 Parsed type: {type(flashcards)}")
             
             # Ensure it's a list
             if isinstance(flashcards, dict):
@@ -64,14 +66,44 @@ class FlashcardAgent:
             
             # If still not a list, try to extract from response
             if not isinstance(flashcards, list):
+                print("⚠️ Response is not a list, trying to extract JSON array...")
+                print(f"⚠️ Current flashcards type: {type(flashcards)}")
+                print(f"⚠️ Current flashcards value: {flashcards}")
+                
                 # Try to find array in response text
                 import re
-                json_match = re.search(r'\[.*\]', response, re.DOTALL)
+                
+                # First, try to find a JSON array
+                json_match = re.search(r'\[[\s\S]*?\]', response, re.DOTALL)
                 if json_match:
                     try:
-                        flashcards = json.loads(json_match.group())
-                    except:
-                        pass
+                        extracted = json.loads(json_match.group())
+                        if isinstance(extracted, list):
+                            flashcards = extracted
+                            print(f"✅ Extracted {len(flashcards)} flashcards from JSON array")
+                    except Exception as parse_error:
+                        print(f"❌ Failed to parse JSON array: {str(parse_error)}")
+                        print(f"❌ Matched text: {json_match.group()[:200]}...")
+                
+                # If still not a list, try to find individual objects
+                if not isinstance(flashcards, list):
+                    try:
+                        # Look for objects with question/answer
+                        obj_pattern = r'\{(?:[^{}]|(?:\{[^{}]*\}))*"question"(?:[^{}]|(?:\{[^{}]*\}))*"answer"(?:[^{}]|(?:\{[^{}]*\}))*\}'
+                        obj_matches = re.findall(obj_pattern, response, re.DOTALL)
+                        if obj_matches:
+                            flashcards = []
+                            for match in obj_matches:
+                                try:
+                                    parsed_obj = json.loads(match)
+                                    if isinstance(parsed_obj, dict) and 'question' in parsed_obj and 'answer' in parsed_obj:
+                                        flashcards.append(parsed_obj)
+                                except:
+                                    pass
+                            if flashcards:
+                                print(f"✅ Extracted {len(flashcards)} flashcards from individual objects")
+                    except Exception as obj_error:
+                        print(f"❌ Failed to extract objects: {str(obj_error)}")
             
             # Validate flashcards
             validated_flashcards = []
@@ -91,7 +123,9 @@ class FlashcardAgent:
             
             if not validated_flashcards:
                 # Last resort: try to extract Q/A pairs from text
-                raise ValueError(f"No valid flashcards generated. LLM response: {response[:200]}...")
+                print(f"❌ No validated flashcards. Raw response: {response}")
+                print(f"❌ Parsed flashcards type: {type(flashcards)}, value: {flashcards}")
+                raise ValueError(f"No valid flashcards generated. LLM response length: {len(response)} chars. Preview: {response[:500]}...")
             
             return validated_flashcards
         

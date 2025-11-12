@@ -445,9 +445,19 @@ def flashcards_page():
                     st.info("   • Try again - sometimes the API needs a retry")
                     
                     # Show technical details
-                    with st.expander("🔍 Technical Debug Info"):
-                        st.warning("Check the console/terminal for detailed error logs")
+                    with st.expander("🔍 Technical Debug Info", expanded=True):
+                        st.warning("⚠️ Check the console/terminal for detailed error logs")
                         st.code("Look for messages starting with: 📥, 📊, ✅, ❌, ⚠️")
+                        st.markdown("---")
+                        st.markdown("**To debug:**")
+                        st.markdown("1. Open the terminal/console where Streamlit is running")
+                        st.markdown("2. Look for lines starting with `📥 LLM Response`")
+                        st.markdown("3. Check if the response is valid JSON")
+                        st.markdown("4. Share the error logs if the issue persists")
+                        
+                        # Try to show a retry button
+                        if st.button("🔄 Retry Flashcard Generation", type="secondary"):
+                            st.rerun()
         except TimeoutError as e:
             st.error(f"⏱️ {str(e)}")
             st.info("💡 Try processing a smaller PDF or wait a moment and try again.")
