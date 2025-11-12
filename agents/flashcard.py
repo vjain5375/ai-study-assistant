@@ -45,7 +45,12 @@ class FlashcardAgent:
             if not response or len(response.strip()) == 0:
                 raise ValueError("Empty response from LLM")
             
+            print(f"📥 LLM Response length: {len(response)} characters")
+            print(f"📥 LLM Response preview: {response[:200]}...")
+            
             flashcards = parse_json_response(response)
+            
+            print(f"📊 Parsed flashcards: {len(flashcards) if isinstance(flashcards, list) else 'Not a list'}")
             
             # Ensure it's a list
             if isinstance(flashcards, dict):
@@ -131,18 +136,36 @@ class FlashcardAgent:
                 # Debug: Print chunk info
                 print(f"Processing chunk {i+1}/{len(chunks_to_process)}: {len(chunk)} characters")
                 print(f"Chunk preview: {chunk[:100]}...")
-                    
-                flashcards = self.generate_flashcards(chunk, num_flashcards=3)
                 
-                if flashcards and len(flashcards) > 0:
-                    for card in flashcards:
-                        card['chunk_id'] = i
-                    all_flashcards.extend(flashcards)
-                else:
-                    # Try with a simpler prompt if first attempt failed
+                try:
+                    flashcards = self.generate_flashcards(chunk, num_flashcards=3)
+                    
+                    if flashcards and len(flashcards) > 0:
+                        print(f"✅ Generated {len(flashcards)} flashcards from chunk {i+1}")
+                        for card in flashcards:
+                            card['chunk_id'] = i
+                        all_flashcards.extend(flashcards)
+                    else:
+                        print(f"⚠️ No flashcards from chunk {i+1}, trying with fewer cards...")
+                        # Try with a simpler prompt if first attempt failed
+                        try:
+                            flashcards = self.generate_flashcards(chunk, num_flashcards=2)
+                            if flashcards and len(flashcards) > 0:
+                                print(f"✅ Generated {len(flashcards)} flashcards from chunk {i+1} (retry)")
+                                for card in flashcards:
+                                    card['chunk_id'] = i
+                                all_flashcards.extend(flashcards)
+                            else:
+                                print(f"❌ Still no flashcards from chunk {i+1} after retry")
+                        except Exception as retry_error:
+                            print(f"❌ Retry failed for chunk {i+1}: {str(retry_error)}")
+                except Exception as gen_error:
+                    print(f"❌ Error generating flashcards from chunk {i+1}: {str(gen_error)}")
+                    # Try one more time with a very simple request
                     try:
-                        flashcards = self.generate_flashcards(chunk, num_flashcards=2)
-                        if flashcards:
+                        flashcards = self.generate_flashcards(chunk, num_flashcards=1)
+                        if flashcards and len(flashcards) > 0:
+                            print(f"✅ Generated {len(flashcards)} flashcard from chunk {i+1} (final retry)")
                             for card in flashcards:
                                 card['chunk_id'] = i
                             all_flashcards.extend(flashcards)

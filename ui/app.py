@@ -438,8 +438,16 @@ def flashcards_page():
                     st.success(f"✅ Generated {len(flashcards)} flashcards from PDF: **{current_file}**!")
                     st.rerun()
                 else:
-                    st.error("❌ No flashcards were generated. The content might not be suitable for flashcard creation.")
-                    st.info("💡 Try with a different PDF or check if the content has clear concepts/topics.")
+                    st.error("❌ No flashcards were generated. The LLM might not have returned valid flashcards.")
+                    st.info("💡 Possible reasons:")
+                    st.info("   • The LLM response was not in the expected JSON format")
+                    st.info("   • The content might need clearer structure")
+                    st.info("   • Try again - sometimes the API needs a retry")
+                    
+                    # Show technical details
+                    with st.expander("🔍 Technical Debug Info"):
+                        st.warning("Check the console/terminal for detailed error logs")
+                        st.code("Look for messages starting with: 📥, 📊, ✅, ❌, ⚠️")
         except TimeoutError as e:
             st.error(f"⏱️ {str(e)}")
             st.info("💡 Try processing a smaller PDF or wait a moment and try again.")

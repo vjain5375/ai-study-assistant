@@ -6,16 +6,14 @@ Study Material:
 {text}
 
 Instructions:
-1. Create {num_flashcards} flashcards from the provided text
+1. Create EXACTLY {num_flashcards} flashcards from the provided text
 2. Make them SHORT like sticky notes - maximum 1-2 sentences per answer
 3. Focus on KEY POINTS, definitions, and important facts
 4. Questions should be brief and direct
 5. Answers should be concise bullet points or short phrases
 6. Each flashcard = one key concept or fact
 
-Format: Short sticky-note style
-- Question: Brief, direct
-- Answer: 1-2 sentences max, key points only
+CRITICAL: You MUST return ONLY a valid JSON array. No explanations, no markdown, no code blocks. Just the JSON array.
 
 Return your response as a JSON array with this exact format:
 [
@@ -23,10 +21,13 @@ Return your response as a JSON array with this exact format:
     "question": "What is...?",
     "answer": "Short key point (1-2 sentences max)"
   }},
-  ...
+  {{
+    "question": "Another question?",
+    "answer": "Another short answer"
+  }}
 ]
 
-Only return the JSON array, no additional text."""
+IMPORTANT: Return ONLY the JSON array. Start with [ and end with ]. No ```json, no markdown, no explanations."""
 
 
 QUIZ_PROMPT = """You are a quiz generator for students. Create multiple-choice questions from the study material.
