@@ -40,7 +40,8 @@ class PlannerAgent:
         )
         
         try:
-            response = call_llm(prompt)
+            # Planner agent uses Groq LLaMA 3.1 70B
+            response = call_llm(prompt, provider="groq")
             plan = parse_json_response(response)
             
             # Validate and enhance plan

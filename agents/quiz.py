@@ -37,7 +37,8 @@ class QuizAgent:
         prompt += f"\n\nDifficulty Level: {difficulty}. Adjust question complexity accordingly."
         
         try:
-            response = call_llm(prompt)
+            # Quiz agent uses DeepSeek V3/R1
+            response = call_llm(prompt, provider="deepseek")
             
             # Debug: Check response
             if not response or len(response.strip()) == 0:

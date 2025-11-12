@@ -181,9 +181,9 @@ def flashcards_page():
             st.info("💡 Try processing a smaller PDF or wait a moment and try again.")
         except ValueError as e:
             error_msg = str(e)
-            if "API key" in error_msg or "key" in error_msg.lower():
+            if "API key" in error_msg or "key" in error_msg.lower() or "GROQ" in error_msg:
                 st.error(f"🔑 {error_msg}")
-                st.info("💡 Please check your Gemini API key configuration.")
+                st.info("💡 Please check your Groq API key in Streamlit Cloud Secrets or .env file.")
             else:
                 st.error(f"❌ {error_msg}")
                 st.info("💡 The AI model may have returned an invalid response. Try again.")
@@ -191,9 +191,11 @@ def flashcards_page():
             error_msg = str(e)
             st.error(f"❌ Error generating flashcards: {error_msg}")
             st.info("💡 Please check:")
-            st.info("   • Your Gemini API key is configured correctly")
+            st.info("   • Your Groq API key is configured correctly (for flashcards)")
             st.info("   • You have internet connection")
             st.info("   • Try again with a smaller PDF")
+            if "GROQ" in error_msg.upper() or "groq" in error_msg.lower():
+                st.warning("⚠️ Flashcard generation uses Groq API. Make sure GROQ_API_KEY is set!")
             # Show full error in expander for debugging
             with st.expander("🔍 Technical Details"):
                 st.code(str(e))
@@ -294,9 +296,9 @@ def quizzes_page():
             st.info("💡 Try processing a smaller PDF or wait a moment and try again.")
         except ValueError as e:
             error_msg = str(e)
-            if "API key" in error_msg or "key" in error_msg.lower():
+            if "API key" in error_msg or "key" in error_msg.lower() or "DEEPSEEK" in error_msg:
                 st.error(f"🔑 {error_msg}")
-                st.info("💡 Please check your Gemini API key configuration.")
+                st.info("💡 Please check your DeepSeek API key in Streamlit Cloud Secrets or .env file.")
             else:
                 st.error(f"❌ {error_msg}")
                 st.info("💡 The AI model may have returned an invalid response. Try again.")
@@ -304,9 +306,11 @@ def quizzes_page():
             error_msg = str(e)
             st.error(f"❌ Error generating quiz: {error_msg}")
             st.info("💡 Please check:")
-            st.info("   • Your Gemini API key is configured correctly")
+            st.info("   • Your DeepSeek API key is configured correctly (for quizzes)")
             st.info("   • You have internet connection")
             st.info("   • Try again with a smaller PDF")
+            if "DEEPSEEK" in error_msg.upper() or "deepseek" in error_msg.lower():
+                st.warning("⚠️ Quiz generation uses DeepSeek API. Make sure DEEPSEEK_API_KEY is set!")
             # Show full error in expander for debugging
             with st.expander("🔍 Technical Details"):
                 st.code(str(e))

@@ -3,6 +3,7 @@ from typing import List, Dict
 from datetime import datetime
 from utils.llm_utils import call_llm
 from utils.prompts import CHAT_PROMPT
+from utils.memory import MemoryModule
 import config
 
 
@@ -11,6 +12,7 @@ class ChatAgent:
     
     def __init__(self):
         self.conversation_history = []
+        self.memory = MemoryModule()
     
     def answer_question(self, question: str, context: str, max_context_length: int = 3000) -> Dict:
         """
@@ -34,7 +36,12 @@ class ChatAgent:
         )
         
         try:
-            answer = call_llm(prompt)
+            # Chat agent uses DeepSeek V3/R1 (fallback to Gemini if DeepSeek unavailable)
+            try:
+                answer = call_llm(prompt, provider="deepseek")
+            except:
+                # Fallback to Gemini
+                answer = call_llm(prompt, provider="gemini")
             
             # Store in conversation history
             self.conversation_history.append({
@@ -56,7 +63,7 @@ class ChatAgent:
     
     def find_relevant_context(self, question: str, chunks: List[str]) -> str:
         """
-        Find the most relevant context chunks for a question.
+        Find the most relevant context chunks for a question using FAISS semantic search.
         
         Args:
             question: Student's question
@@ -65,7 +72,15 @@ class ChatAgent:
         Returns:
             Most relevant context string
         """
-        # Simple keyword matching (can be enhanced with embeddings)
+        # Use FAISS memory module for semantic search
+        try:
+            relevant_chunks = self.memory.find_relevant_chunks(question, chunks, k=3)
+            if relevant_chunks:
+                return "\n\n".join(relevant_chunks)
+        except Exception as e:
+            print(f"Error in semantic search, falling back to keyword matching: {e}")
+        
+        # Fallback: Simple keyword matching
         question_lower = question.lower()
         question_words = set(question_lower.split())
         

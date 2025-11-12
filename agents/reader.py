@@ -2,6 +2,7 @@
 from typing import Dict, List
 from utils.pdf_utils import extract_text_from_uploaded_file, clean_text, split_into_chunks
 from utils.llm_utils import call_llm, parse_json_response
+from utils.memory import MemoryModule
 import config
 
 
@@ -11,6 +12,7 @@ class ReaderAgent:
     def __init__(self):
         self.chunk_size = config.CHUNK_SIZE
         self.chunk_overlap = config.CHUNK_OVERLAP
+        self.memory = MemoryModule()
     
     def process_file(self, uploaded_file) -> Dict:
         """
@@ -37,6 +39,13 @@ class ReaderAgent:
         
         # Identify topics
         topics = self._identify_topics(cleaned_text)
+        
+        # Add chunks to memory for semantic search
+        try:
+            metadata = [{"file_name": uploaded_file.name, "chunk_id": i} for i in range(len(chunks))]
+            self.memory.add_documents(chunks, metadata)
+        except Exception as e:
+            print(f"Warning: Could not add documents to memory: {e}")
         
         return {
             "raw_text": cleaned_text,
@@ -74,7 +83,8 @@ Return a JSON array of topics in this format:
 Only return the JSON array."""
         
         try:
-            response = call_llm(prompt)
+            # Reader agent uses Gemini Flash
+            response = call_llm(prompt, provider="gemini")
             topics = parse_json_response(response)
             return topics if isinstance(topics, list) else []
         except Exception as e:

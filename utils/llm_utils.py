@@ -1,21 +1,22 @@
 """LLM utility functions for interacting with AI models"""
 import json
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 import config
 
 
-def get_llm(model_name: str = None, temperature: float = 0.7):
+def get_llm(provider: str = "gemini", model_name: str = None, temperature: float = 0.7):
     """
-    Get LLM instance based on configuration.
+    Get LLM instance based on provider.
     
     Args:
-        model_name: Name of the model to use
+        provider: Provider name ("gemini", "groq", "deepseek", "openai")
+        model_name: Name of the model to use (overrides default)
         temperature: Temperature for generation
         
     Returns:
-        LLM instance
+        LLM instance or provider marker string
     """
     if config.USE_LOCAL_MODEL:
         # For local models (Ollama, etc.)
@@ -25,38 +26,154 @@ def get_llm(model_name: str = None, temperature: float = 0.7):
             model=model_name or "llama2",
             temperature=temperature
         )
-    else:
-        # Use Google Gemini (preferred) or fallback to OpenAI
-        if config.GEMINI_API_KEY:
-            try:
-                from langchain_google_genai import ChatGoogleGenerativeAI
-                return ChatGoogleGenerativeAI(
-                    model=model_name or config.DEFAULT_MODEL,
-                    temperature=temperature,
-                    google_api_key=config.GEMINI_API_KEY
-                )
-            except ImportError:
-                raise ImportError("langchain-google-genai not installed. Run: pip install langchain-google-genai")
-        elif config.OPENAI_API_KEY:
-            # Fallback to OpenAI if Gemini not available
-            from langchain_openai import ChatOpenAI
-            return ChatOpenAI(
-                model_name=model_name or "gpt-3.5-turbo",
+    
+    provider = provider.lower()
+    
+    # Gemini Provider (for Reader agent)
+    if provider == "gemini":
+        if not config.GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY not set. Please set it in .env file")
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=config.GEMINI_API_KEY)
+            return "gemini_direct"
+        except ImportError:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            return ChatGoogleGenerativeAI(
+                model=model_name or config.GEMINI_MODEL,
                 temperature=temperature,
-                openai_api_key=config.OPENAI_API_KEY
+                google_api_key=config.GEMINI_API_KEY
             )
-        else:
-            raise ValueError("GEMINI_API_KEY or OPENAI_API_KEY not set. Please set it in .env file")
+    
+    # Groq Provider (for Flashcard & Planner agents)
+    elif provider == "groq":
+        if not config.GROQ_API_KEY:
+            raise ValueError("GROQ_API_KEY not set. Please set it in .env file")
+        try:
+            from langchain_groq import ChatGroq
+            
+            # Try different Groq models in order (most common first)
+            models_to_try = [
+                "llama-3.1-70b-versatile",  # Most common
+                "llama-3.3-70b-versatile",  # Newer version
+                "llama-3.1-8b-instant",     # Faster fallback
+                "mixtral-8x7b-32768",       # Alternative
+                model_name or config.GROQ_MODEL  # User specified
+            ]
+            # Remove duplicates while preserving order
+            models_to_try = list(dict.fromkeys(models_to_try))
+            
+            last_error = None
+            for model_attempt in models_to_try:
+                try:
+                    llm = ChatGroq(
+                        model=model_attempt,
+                        temperature=temperature,
+                        groq_api_key=config.GROQ_API_KEY
+                    )
+                    # Test if it works by trying to create it
+                    print(f"✅ Groq model initialized: {model_attempt}")
+                    return llm
+                except Exception as e:
+                    error_str = str(e)
+                    last_error = e
+                    # If it's a 404 or model not found, try next model
+                    if "404" in error_str or "not found" in error_str.lower() or "model" in error_str.lower():
+                        print(f"⚠️ Model {model_attempt} not available, trying next...")
+                        continue
+                    else:
+                        # Other error (might be API key, quota, etc.) - try this model anyway
+                        print(f"⚠️ Error with {model_attempt}: {error_str}, but trying to use it...")
+                        try:
+                            return ChatGroq(
+                                model=model_attempt,
+                                temperature=temperature,
+                                groq_api_key=config.GROQ_API_KEY
+                            )
+                        except:
+                            continue
+            
+            # If all failed, raise error with helpful message
+            raise Exception(f"Failed to initialize Groq. Tried models: {models_to_try}. Last error: {str(last_error)}. Please check your GROQ_API_KEY in Streamlit Cloud Secrets or .env file.")
+        except ImportError:
+            raise ImportError("langchain-groq not installed. Run: pip install langchain-groq")
+    
+    # DeepSeek Provider (for Quiz & Chat agents)
+    elif provider == "deepseek":
+        if not config.DEEPSEEK_API_KEY:
+            raise ValueError("DEEPSEEK_API_KEY not set. Please set it in Streamlit Cloud Secrets or .env file")
+        try:
+            # DeepSeek uses OpenAI-compatible API
+            from langchain_openai import ChatOpenAI
+            
+            # Try different DeepSeek models
+            models_to_try = [
+                model_name or config.DEEPSEEK_MODEL,
+                "deepseek-chat",
+                "deepseek-reasoner"
+            ]
+            models_to_try = list(dict.fromkeys(models_to_try))
+            
+            last_error = None
+            for model_attempt in models_to_try:
+                try:
+                    llm = ChatOpenAI(
+                        model=model_attempt,
+                        temperature=temperature,
+                        openai_api_key=config.DEEPSEEK_API_KEY,
+                        base_url="https://api.deepseek.com/v1"
+                    )
+                    print(f"✅ DeepSeek model initialized: {model_attempt}")
+                    return llm
+                except Exception as e:
+                    error_str = str(e)
+                    last_error = e
+                    if "404" in error_str or "not found" in error_str.lower():
+                        print(f"⚠️ Model {model_attempt} not available, trying next...")
+                        continue
+                    else:
+                        # Try with the model anyway
+                        try:
+                            return ChatOpenAI(
+                                model=model_attempt,
+                                temperature=temperature,
+                                openai_api_key=config.DEEPSEEK_API_KEY,
+                                base_url="https://api.deepseek.com/v1"
+                            )
+                        except:
+                            continue
+            
+            # If all failed
+            raise Exception(f"Failed to initialize DeepSeek. Tried: {models_to_try}. Last error: {str(last_error)}. Please check your DEEPSEEK_API_KEY in Streamlit Cloud Secrets or .env file.")
+        except ImportError:
+            raise ImportError("langchain-openai not installed. Run: pip install langchain-openai")
+    
+    # OpenAI Provider (fallback)
+    elif provider == "openai":
+        if not config.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY not set. Please set it in .env file")
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model_name=model_name or "gpt-3.5-turbo",
+            temperature=temperature,
+            openai_api_key=config.OPENAI_API_KEY
+        )
+    
+    else:
+        raise ValueError(f"Unknown provider: {provider}. Use 'gemini', 'groq', 'deepseek', or 'openai'")
 
 
-def call_llm(prompt: str, system_message: str = None, model_name: str = None, timeout: int = 60) -> str:
+def call_llm(prompt: str, system_message: str = None, provider: str = "gemini", 
+              model_name: str = None, temperature: float = 0.7, timeout: int = 60) -> str:
     """
     Call LLM with a prompt and return the response.
     
     Args:
         prompt: User prompt
         system_message: Optional system message
-        model_name: Model to use
+        provider: Provider name ("gemini", "groq", "deepseek", "openai")
+        model_name: Model to use (overrides provider default)
+        temperature: Temperature for generation
         timeout: Timeout in seconds (default: 60)
         
     Returns:
@@ -67,8 +184,59 @@ def call_llm(prompt: str, system_message: str = None, model_name: str = None, ti
         import importlib
         importlib.reload(config)
         
-        llm = get_llm(model_name=model_name)
+        llm = get_llm(provider=provider, model_name=model_name, temperature=temperature)
         
+        # If using direct Gemini API
+        if llm == "gemini_direct":
+            import google.generativeai as genai
+            genai.configure(api_key=config.GEMINI_API_KEY)
+            
+            # Combine system message and prompt
+            full_prompt = prompt
+            if system_message:
+                full_prompt = f"{system_message}\n\n{prompt}"
+            
+            # Try models - some API keys may have access to different models
+            models_to_try = [
+                model_name or config.GEMINI_MODEL,
+                "gemini-1.5-flash",
+                "gemini-1.5-pro",
+                "gemini-pro"
+            ]
+            # Remove duplicates while preserving order
+            models_to_try = list(dict.fromkeys(models_to_try))
+            
+            last_error = None
+            for model_name_attempt in models_to_try:
+                try:
+                    model = genai.GenerativeModel(model_name_attempt)
+                    response = model.generate_content(
+                        full_prompt,
+                        generation_config=genai.types.GenerationConfig(
+                            temperature=temperature
+                        )
+                    )
+                    if response and hasattr(response, 'text') and response.text:
+                        return response.text
+                    elif response and hasattr(response, 'candidates') and response.candidates:
+                        # Handle different response formats
+                        candidate = response.candidates[0]
+                        if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                            return candidate.content.parts[0].text
+                except Exception as e:
+                    error_str = str(e)
+                    # If it's a 404, try next model
+                    if "404" in error_str or "not found" in error_str.lower():
+                        last_error = e
+                        continue
+                    else:
+                        # Other error, might be quota or permission - raise it
+                        raise
+            
+            # If all models failed with 404, the API key might not have access
+            raise Exception(f"Gemini API: No available models found. Tried: {models_to_try}. Error: {str(last_error)}")
+        
+        # Use langchain LLM
         # Set timeout if supported
         if hasattr(llm, 'timeout'):
             llm.timeout = timeout
@@ -95,11 +263,11 @@ def call_llm(prompt: str, system_message: str = None, model_name: str = None, ti
         if "timeout" in error_msg.lower() or "timed out" in error_msg.lower():
             raise TimeoutError(f"LLM request timed out after {timeout} seconds. Try with fewer chunks or smaller text.")
         elif "api" in error_msg.lower() and ("key" in error_msg.lower() or "quota" in error_msg.lower() or "permission" in error_msg.lower()):
-            raise ValueError(f"API Error: {error_msg}. Please check your Gemini API key configuration.")
+            raise ValueError(f"API Error: {error_msg}. Please check your {provider.upper()} API key configuration.")
         elif "empty" in error_msg.lower():
             raise ValueError(error_msg)
         else:
-            raise Exception(f"Error calling LLM: {error_msg}")
+            raise Exception(f"Error calling LLM ({provider}): {error_msg}")
 
 
 def parse_json_response(response: str) -> Any:
@@ -140,4 +308,3 @@ def parse_json_response(response: str) -> Any:
                 pass
         
         raise ValueError(f"Could not parse JSON from response: {str(e)}")
-

@@ -4,6 +4,7 @@ langchain>=0.1.0
 langchain-google-genai>=1.0.0
 langchain-openai>=0.0.2
 langchain-community>=0.0.10
+langchain-groq>=0.1.0
 faiss-cpu>=1.7.4
 python-dotenv>=1.0.0
 pydantic>=2.5.0
@@ -14,4 +15,7 @@ PyPDF2>=3.0.1
 pillow>=10.1.0
 tinydb>=4.8.0
 google-generativeai>=0.3.0
+sentence-transformers>=2.2.0
+torch>=2.0.0
+transformers>=4.30.0
 

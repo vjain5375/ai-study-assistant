@@ -7,6 +7,8 @@ load_dotenv()
 # API Configuration
 # Load from environment - never hardcode keys here
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 # Keep OpenAI for backward compatibility (optional)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 USE_LOCAL_MODEL = os.getenv("LOCAL_MODEL", "False").lower() == "true"
@@ -18,9 +20,16 @@ if GEMINI_API_KEY:
     _masked_key = f"{GEMINI_API_KEY[:7]}...{GEMINI_API_KEY[-4:]}" if len(GEMINI_API_KEY) > 11 else "***"
     # Don't actually log it, just have the variable available if needed for debugging
 
-# Model Configuration
-DEFAULT_MODEL = "gemini-pro"  # Google Gemini model
-EMBEDDING_MODEL = "text-embedding-3-small"  # Keep OpenAI embedding or switch to Gemini
+# Model Configuration - Multi-Provider Setup
+# Provider-specific models
+GEMINI_MODEL = "gemini-1.5-flash"  # Fast and efficient for Reader
+GROQ_MODEL = "llama-3.1-70b-versatile"  # Groq LLaMA 3.1 70B for Flashcard & Planner
+# Alternative Groq models: llama-3.1-8b-instant, llama-3.3-70b-versatile, mixtral-8x7b-32768
+DEEPSEEK_MODEL = "deepseek-chat"  # DeepSeek V3/R1 for Quiz & Chat
+
+# Embedding Configuration
+EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"  # bge-large for FAISS embeddings
+EMBEDDING_DIMENSION = 1024  # bge-large dimension
 
 # File Paths
 OUTPUT_DIR = "outputs"

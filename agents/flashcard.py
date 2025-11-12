@@ -33,7 +33,8 @@ class FlashcardAgent:
         )
         
         try:
-            response = call_llm(prompt)
+            # Flashcard agent uses Groq LLaMA 3.1 70B
+            response = call_llm(prompt, provider="groq")
             
             # Debug: Print response for troubleshooting
             if not response or len(response.strip()) == 0:
