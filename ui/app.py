@@ -180,11 +180,23 @@ def flashcards_page():
             st.error(f"⏱️ {str(e)}")
             st.info("💡 Try processing a smaller PDF or wait a moment and try again.")
         except ValueError as e:
-            st.error(f"🔑 {str(e)}")
-            st.info("💡 Please check your OpenAI API key in the sidebar.")
+            error_msg = str(e)
+            if "API key" in error_msg or "key" in error_msg.lower():
+                st.error(f"🔑 {error_msg}")
+                st.info("💡 Please check your Gemini API key configuration.")
+            else:
+                st.error(f"❌ {error_msg}")
+                st.info("💡 The AI model may have returned an invalid response. Try again.")
         except Exception as e:
-            st.error(f"❌ Error generating flashcards: {str(e)}")
-            st.info("💡 Please try again or check your API key and internet connection.")
+            error_msg = str(e)
+            st.error(f"❌ Error generating flashcards: {error_msg}")
+            st.info("💡 Please check:")
+            st.info("   • Your Gemini API key is configured correctly")
+            st.info("   • You have internet connection")
+            st.info("   • Try again with a smaller PDF")
+            # Show full error in expander for debugging
+            with st.expander("🔍 Technical Details"):
+                st.code(str(e))
     
     # Display flashcards
     if st.session_state.flashcards:
@@ -281,11 +293,23 @@ def quizzes_page():
             st.error(f"⏱️ {str(e)}")
             st.info("💡 Try processing a smaller PDF or wait a moment and try again.")
         except ValueError as e:
-            st.error(f"🔑 {str(e)}")
-            st.info("💡 Please check your OpenAI API key in the sidebar.")
+            error_msg = str(e)
+            if "API key" in error_msg or "key" in error_msg.lower():
+                st.error(f"🔑 {error_msg}")
+                st.info("💡 Please check your Gemini API key configuration.")
+            else:
+                st.error(f"❌ {error_msg}")
+                st.info("💡 The AI model may have returned an invalid response. Try again.")
         except Exception as e:
-            st.error(f"❌ Error generating quiz: {str(e)}")
-            st.info("💡 Please try again or check your API key and internet connection.")
+            error_msg = str(e)
+            st.error(f"❌ Error generating quiz: {error_msg}")
+            st.info("💡 Please check:")
+            st.info("   • Your Gemini API key is configured correctly")
+            st.info("   • You have internet connection")
+            st.info("   • Try again with a smaller PDF")
+            # Show full error in expander for debugging
+            with st.expander("🔍 Technical Details"):
+                st.code(str(e))
     
     # Display quiz
     if st.session_state.quizzes:

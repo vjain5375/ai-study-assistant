@@ -38,6 +38,11 @@ class QuizAgent:
         
         try:
             response = call_llm(prompt)
+            
+            # Debug: Check response
+            if not response or len(response.strip()) == 0:
+                raise ValueError("Empty response from LLM")
+            
             questions = parse_json_response(response)
             
             # Ensure it's a list
@@ -65,11 +70,16 @@ class QuizAgent:
                         "difficulty": difficulty
                     })
             
+            if not validated_questions:
+                raise ValueError("No valid questions generated from response")
+            
             return validated_questions
         
         except Exception as e:
-            print(f"Error generating quiz: {str(e)}")
-            return []
+            error_msg = str(e)
+            print(f"Error generating quiz: {error_msg}")
+            # Re-raise with more context
+            raise Exception(f"Failed to generate quiz: {error_msg}")
     
     def generate_from_chunks(self, chunks: List[str], difficulty: str = "Medium", max_chunks: int = 3) -> List[Dict]:
         """

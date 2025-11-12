@@ -34,6 +34,11 @@ class FlashcardAgent:
         
         try:
             response = call_llm(prompt)
+            
+            # Debug: Print response for troubleshooting
+            if not response or len(response.strip()) == 0:
+                raise ValueError("Empty response from LLM")
+            
             flashcards = parse_json_response(response)
             
             # Ensure it's a list
@@ -50,11 +55,16 @@ class FlashcardAgent:
                         "topic": card.get('topic', 'General')
                     })
             
+            if not validated_flashcards:
+                raise ValueError("No valid flashcards generated from response")
+            
             return validated_flashcards
         
         except Exception as e:
-            print(f"Error generating flashcards: {str(e)}")
-            return []
+            error_msg = str(e)
+            print(f"Error generating flashcards: {error_msg}")
+            # Re-raise with more context
+            raise Exception(f"Failed to generate flashcards: {error_msg}")
     
     def generate_from_chunks(self, chunks: List[str], max_chunks: int = 5) -> List[Dict]:
         """

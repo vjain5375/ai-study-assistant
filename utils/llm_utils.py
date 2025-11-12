@@ -63,6 +63,10 @@ def call_llm(prompt: str, system_message: str = None, model_name: str = None, ti
         LLM response text
     """
     try:
+        # Reload config to get latest API key
+        import importlib
+        importlib.reload(config)
+        
         llm = get_llm(model_name=model_name)
         
         # Set timeout if supported
@@ -78,14 +82,22 @@ def call_llm(prompt: str, system_message: str = None, model_name: str = None, ti
         
         # Handle different response types
         if hasattr(response, 'content'):
-            return response.content
-        return str(response)
+            content = response.content
+            if content is None or (isinstance(content, str) and len(content.strip()) == 0):
+                raise ValueError("Empty response from LLM. The model may have encountered an error.")
+            return content
+        response_str = str(response)
+        if not response_str or len(response_str.strip()) == 0:
+            raise ValueError("Empty response from LLM. The model may have encountered an error.")
+        return response_str
     except Exception as e:
         error_msg = str(e)
         if "timeout" in error_msg.lower() or "timed out" in error_msg.lower():
             raise TimeoutError(f"LLM request timed out after {timeout} seconds. Try with fewer chunks or smaller text.")
-        elif "api" in error_msg.lower() and "key" in error_msg.lower():
-            raise ValueError("Invalid or missing API key. Please check your Gemini API key in the sidebar.")
+        elif "api" in error_msg.lower() and ("key" in error_msg.lower() or "quota" in error_msg.lower() or "permission" in error_msg.lower()):
+            raise ValueError(f"API Error: {error_msg}. Please check your Gemini API key configuration.")
+        elif "empty" in error_msg.lower():
+            raise ValueError(error_msg)
         else:
             raise Exception(f"Error calling LLM: {error_msg}")
 
