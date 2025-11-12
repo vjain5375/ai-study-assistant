@@ -38,23 +38,15 @@ class ChatAgent:
         )
         
         try:
-            # Chat agent uses DeepSeek V3/R1 (fallback to Groq/Gemini if DeepSeek unavailable)
-            try:
-                answer = call_llm(prompt, provider="deepseek")
-            except Exception as deepseek_error:
-                error_str = str(deepseek_error)
-                if "balance" in error_str.lower() or "insufficient" in error_str.lower() or "402" in error_str:
-                    # Try Groq first, then Gemini
-                    try:
-                        answer = call_llm(prompt, provider="groq")
-                    except:
-                        answer = call_llm(prompt, provider="gemini")
-                else:
-                    # Other error, try Groq then Gemini
-                    try:
-                        answer = call_llm(prompt, provider="groq")
-                    except:
-                        answer = call_llm(prompt, provider="gemini")
+            # Chat agent uses ONLY Gemini
+            if not config.GEMINI_API_KEY:
+                raise ValueError("GEMINI_API_KEY not set. Please set it in .env file or Streamlit Cloud Secrets")
+            
+            print(f"Calling LLM (Gemini) for chat with prompt length: {len(prompt)} characters")
+            print(f"Context being sent: {context[:300]}...")
+            
+            answer = call_llm(prompt, provider="gemini")
+            print(f"Gemini response received: {len(answer) if answer else 0} characters")
             
             # Determine confidence
             confidence = "high" if len(context) > 500 else "medium"

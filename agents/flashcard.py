@@ -38,29 +38,20 @@ class FlashcardAgent:
         prompt += "\n\nIMPORTANT: Keep answers SHORT (1-2 sentences max). Think sticky notes, not essays! Focus on key points only."
         
         try:
-            # Check API keys before calling LLM
-            print(f"Checking API keys...")
-            print(f"   GROQ_API_KEY: {'Set' if config.GROQ_API_KEY else 'Missing'}")
+            # Check API key before calling LLM
+            print(f"Checking API key...")
             print(f"   GEMINI_API_KEY: {'Set' if config.GEMINI_API_KEY else 'Missing'}")
             
-            # Flashcard agent uses Groq LLaMA 3.1 70B
-            # Try Groq first, fallback to Gemini if Groq fails
-            print(f"Calling LLM (Groq) with prompt length: {len(prompt)} characters")
+            if not config.GEMINI_API_KEY:
+                raise ValueError("GEMINI_API_KEY not set. Please set it in .env file or Streamlit Cloud Secrets")
+            
+            # Flashcard agent uses ONLY Gemini
+            print(f"Calling LLM (Gemini) with prompt length: {len(prompt)} characters")
             print(f"Prompt preview: {prompt[:200]}...")
-            try:
-                response = call_llm(prompt, provider="groq")
-                print(f"Groq response received: {len(response) if response else 0} characters")
-            except Exception as groq_error:
-                error_str = str(groq_error)
-                print(f"Groq failed: {error_str}")
-                print("Trying Gemini as fallback...")
-                # Fallback to Gemini
-                try:
-                    response = call_llm(prompt, provider="gemini")
-                    print(f"Gemini response received: {len(response) if response else 0} characters")
-                except Exception as gemini_error:
-                    print(f"Gemini also failed: {str(gemini_error)}")
-                    raise Exception(f"Both Groq and Gemini failed. Groq: {error_str}, Gemini: {str(gemini_error)}")
+            print(f"Text being sent to LLM: {text[:500]}...")
+            
+            response = call_llm(prompt, provider="gemini")
+            print(f"Gemini response received: {len(response) if response else 0} characters")
             
             # Debug: Print response for troubleshooting
             if not response or len(response.strip()) == 0:

@@ -403,11 +403,32 @@ def flashcards_page():
                 st.error("❌ No file processed yet! Please upload and process a file first.")
                 return
             
-            chunks = st.session_state.processed_content.get('chunks', [])
-            if not chunks or len(chunks) == 0:
-                st.error("❌ No content chunks available. The PDF might be empty or not properly extracted.")
-                st.info("💡 Try uploading the file again or check if the PDF has readable text.")
-                return
+                # Verify processed_content exists
+                if st.session_state.processed_content is None:
+                    st.error("❌ ERROR: processed_content is None! Please upload and process a file first.")
+                    return
+                
+                chunks = st.session_state.processed_content.get('chunks', [])
+                
+                # Debug: Show what we have
+                st.info(f"📊 Debug Info:")
+                st.info(f"   processed_content exists: {st.session_state.processed_content is not None}")
+                st.info(f"   chunks count: {len(chunks) if chunks else 0}")
+                st.info(f"   chunks type: {type(chunks)}")
+                
+                if not chunks or len(chunks) == 0:
+                    st.error("❌ No content chunks available. The PDF might be empty or not properly extracted.")
+                    st.info("💡 Try uploading the file again or check if the PDF has readable text.")
+                    
+                    # Show what's in processed_content
+                    with st.expander("🔍 Debug: View processed_content", expanded=True):
+                        st.json(st.session_state.processed_content)
+                    return
+                
+                # Verify chunks have content
+                st.info(f"📦 Chunks available: {len(chunks)}")
+                st.info(f"📝 First chunk length: {len(chunks[0]) if chunks else 0} characters")
+                st.info(f"📝 First chunk preview: {chunks[0][:200] if chunks else 'N/A'}...")
             
             # Show chunk preview for debugging
             with st.expander("🔍 Preview: First Chunk Content", expanded=False):
