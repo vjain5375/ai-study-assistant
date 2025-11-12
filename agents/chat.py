@@ -1,9 +1,10 @@
 """Chat/Doubt Agent - Answers questions about study material"""
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import datetime
 from utils.llm_utils import call_llm
 from utils.prompts import CHAT_PROMPT
 from utils.memory import MemoryModule
+from utils.database import StudyDatabase
 import config
 
 
@@ -13,8 +14,9 @@ class ChatAgent:
     def __init__(self):
         self.conversation_history = []
         self.memory = MemoryModule()
+        self.db = StudyDatabase()
     
-    def answer_question(self, question: str, context: str, max_context_length: int = 3000) -> Dict:
+    def answer_question(self, question: str, context: str, file_id: Optional[int] = None, max_context_length: int = 3000) -> Dict:
         """
         Answer a student's question based on study material.
         
@@ -54,6 +56,9 @@ class ChatAgent:
                     except:
                         answer = call_llm(prompt, provider="gemini")
             
+            # Determine confidence
+            confidence = "high" if len(context) > 500 else "medium"
+            
             # Store in conversation history
             self.conversation_history.append({
                 "question": question,
@@ -61,9 +66,13 @@ class ChatAgent:
                 "timestamp": str(datetime.now())
             })
             
+            # Save to database if file_id provided
+            if file_id:
+                self.db.save_chat_message(file_id, question, answer, confidence)
+            
             return {
                 "answer": answer,
-                "confidence": "high" if len(context) > 500 else "medium"
+                "confidence": confidence
             }
         
         except Exception as e:

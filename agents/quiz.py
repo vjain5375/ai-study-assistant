@@ -1,7 +1,8 @@
 """Quiz Agent - Generates multiple-choice quizzes from study material"""
-from typing import List, Dict
+from typing import List, Dict, Optional
 from utils.llm_utils import call_llm, parse_json_response
 from utils.prompts import QUIZ_PROMPT
+from utils.database import StudyDatabase
 import config
 import json
 import os
@@ -12,6 +13,7 @@ class QuizAgent:
     
     def __init__(self):
         self.max_questions = config.MAX_QUIZ_QUESTIONS_PER_TOPIC
+        self.db = StudyDatabase()
     
     def generate_quiz(self, text: str, num_questions: int = None, difficulty: str = "Medium") -> List[Dict]:
         """
@@ -201,14 +203,20 @@ class QuizAgent:
             "explanation": question.get('explanation', '')
         }
     
-    def save_quiz(self, questions: List[Dict], filename: str = "quizzes.json"):
+    def save_quiz(self, questions: List[Dict], file_id: Optional[int] = None, filename: str = "quizzes.json"):
         """
-        Save quiz questions to JSON file.
+        Save quiz questions to database and JSON file (for backup).
         
         Args:
             questions: List of quiz questions
-            filename: Output filename
+            file_id: Database file ID (optional)
+            filename: Output filename for JSON backup
         """
+        # Save to SQLite database if file_id provided
+        if file_id:
+            self.db.save_quizzes(file_id, questions)
+        
+        # Also save to JSON for backup/compatibility
         if not os.path.exists("outputs"):
             os.makedirs("outputs")
         
@@ -217,16 +225,24 @@ class QuizAgent:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(questions, f, indent=2, ensure_ascii=False)
     
-    def load_quiz(self, filename: str = "quizzes.json") -> List[Dict]:
+    def load_quiz(self, file_id: Optional[int] = None, filename: str = "quizzes.json") -> List[Dict]:
         """
-        Load quiz questions from JSON file.
+        Load quiz questions from database or JSON file.
         
         Args:
-            filename: Input filename
+            file_id: Database file ID (optional, if provided loads from DB)
+            filename: Input filename for JSON fallback
             
         Returns:
             List of quiz questions
         """
+        # Try database first if file_id provided
+        if file_id:
+            db_quizzes = self.db.get_quizzes(file_id)
+            if db_quizzes:
+                return db_quizzes
+        
+        # Fallback to JSON
         filepath = os.path.join("outputs", filename)
         
         if os.path.exists(filepath):

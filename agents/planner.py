@@ -1,8 +1,9 @@
 """Planner Agent - Creates adaptive revision schedules"""
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from utils.llm_utils import call_llm, parse_json_response
 from utils.prompts import PLANNER_PROMPT
+from utils.database import StudyDatabase
 import config
 import json
 import os
@@ -13,6 +14,7 @@ class PlannerAgent:
     
     def __init__(self):
         self.revision_intervals = config.DEFAULT_REVISION_INTERVALS
+        self.db = StudyDatabase()
     
     def create_revision_plan(self, topics: List[Dict], current_date: datetime = None) -> Dict:
         """
@@ -170,14 +172,20 @@ class PlannerAgent:
         upcoming.sort(key=lambda x: x['date'])
         return upcoming
     
-    def save_plan(self, plan: Dict, filename: str = "planner.json"):
+    def save_plan(self, plan: Dict, file_id: Optional[int] = None, filename: str = "planner.json"):
         """
-        Save revision plan to JSON file.
+        Save revision plan to database and JSON file (for backup).
         
         Args:
             plan: Revision plan dictionary
-            filename: Output filename
+            file_id: Database file ID (optional)
+            filename: Output filename for JSON backup
         """
+        # Save to SQLite database if file_id provided
+        if file_id:
+            self.db.save_revision_plan(file_id, plan)
+        
+        # Also save to JSON for backup/compatibility
         if not os.path.exists("outputs"):
             os.makedirs("outputs")
         
@@ -186,16 +194,24 @@ class PlannerAgent:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(plan, f, indent=2, ensure_ascii=False)
     
-    def load_plan(self, filename: str = "planner.json") -> Dict:
+    def load_plan(self, file_id: Optional[int] = None, filename: str = "planner.json") -> Dict:
         """
-        Load revision plan from JSON file.
+        Load revision plan from database or JSON file.
         
         Args:
-            filename: Input filename
+            file_id: Database file ID (optional, if provided loads from DB)
+            filename: Input filename for JSON fallback
             
         Returns:
             Revision plan dictionary
         """
+        # Try database first if file_id provided
+        if file_id:
+            db_plan = self.db.get_revision_plan(file_id)
+            if db_plan:
+                return db_plan
+        
+        # Fallback to JSON
         filepath = os.path.join("outputs", filename)
         
         if os.path.exists(filepath):

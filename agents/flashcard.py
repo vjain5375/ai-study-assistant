@@ -1,7 +1,8 @@
 """Flashcard Agent - Generates Q/A flashcards from study material"""
-from typing import List, Dict
+from typing import List, Dict, Optional
 from utils.llm_utils import call_llm, parse_json_response
 from utils.prompts import FLASHCARD_PROMPT
+from utils.database import StudyDatabase
 import config
 import json
 import os
@@ -12,6 +13,7 @@ class FlashcardAgent:
     
     def __init__(self):
         self.max_flashcards = config.MAX_FLASHCARDS_PER_TOPIC
+        self.db = StudyDatabase()
     
     def generate_flashcards(self, text: str, num_flashcards: int = None) -> List[Dict]:
         """
@@ -155,14 +157,20 @@ class FlashcardAgent:
         
         return all_flashcards
     
-    def save_flashcards(self, flashcards: List[Dict], filename: str = "flashcards.json"):
+    def save_flashcards(self, flashcards: List[Dict], file_id: Optional[int] = None, filename: str = "flashcards.json"):
         """
-        Save flashcards to JSON file.
+        Save flashcards to database and JSON file (for backup).
         
         Args:
             flashcards: List of flashcards
-            filename: Output filename
+            file_id: Database file ID (optional)
+            filename: Output filename for JSON backup
         """
+        # Save to SQLite database if file_id provided
+        if file_id:
+            self.db.save_flashcards(file_id, flashcards)
+        
+        # Also save to JSON for backup/compatibility
         if not os.path.exists("outputs"):
             os.makedirs("outputs")
         
@@ -171,16 +179,24 @@ class FlashcardAgent:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(flashcards, f, indent=2, ensure_ascii=False)
     
-    def load_flashcards(self, filename: str = "flashcards.json") -> List[Dict]:
+    def load_flashcards(self, file_id: Optional[int] = None, filename: str = "flashcards.json") -> List[Dict]:
         """
-        Load flashcards from JSON file.
+        Load flashcards from database or JSON file.
         
         Args:
-            filename: Input filename
+            file_id: Database file ID (optional, if provided loads from DB)
+            filename: Input filename for JSON fallback
             
         Returns:
             List of flashcards
         """
+        # Try database first if file_id provided
+        if file_id:
+            db_flashcards = self.db.get_flashcards(file_id)
+            if db_flashcards:
+                return db_flashcards
+        
+        # Fallback to JSON
         filepath = os.path.join("outputs", filename)
         
         if os.path.exists(filepath):

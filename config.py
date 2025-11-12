@@ -35,7 +35,7 @@ EMBEDDING_DIMENSION = 1024  # bge-large dimension
 # File Paths
 OUTPUT_DIR = "outputs"
 UPLOAD_DIR = "uploads"
-DB_PATH = "study_data.json"
+DB_PATH = "study_data.db"  # SQLite database
 
 # Agent Configuration
 CHUNK_SIZE = 1000

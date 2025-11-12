@@ -14,6 +14,7 @@ from agents.flashcard import FlashcardAgent
 from agents.quiz import QuizAgent
 from agents.planner import PlannerAgent
 from agents.chat import ChatAgent
+from utils.database import StudyDatabase
 import config
 
 # Page configuration
@@ -47,6 +48,10 @@ if 'quiz_answers' not in st.session_state:
     st.session_state.quiz_answers = {}
 if 'quiz_results' not in st.session_state:
     st.session_state.quiz_results = {}
+if 'current_file_id' not in st.session_state:
+    st.session_state.current_file_id = None
+if 'db' not in st.session_state:
+    st.session_state.db = StudyDatabase()
 
 
 def main():
@@ -136,6 +141,20 @@ def upload_page():
                                     saved_file_obj = SavedFile(file_path)
                                     content = st.session_state.reader_agent.process_file(saved_file_obj)
                                     st.session_state.processed_content = content
+                                    
+                                    # Save/update file in database
+                                    file_size = os.path.getsize(file_path)
+                                    file_id = st.session_state.db.add_file(
+                                        selected_file,
+                                        file_path,
+                                        file_size
+                                    )
+                                    st.session_state.current_file_id = file_id
+                                    
+                                    # Save topics to database
+                                    if content.get('topics'):
+                                        st.session_state.db.add_topics(file_id, content.get('topics', []))
+                                    
                                     st.success(f"✅ File '{selected_file}' processed successfully!")
                                     st.rerun()
                                 except Exception as e:
@@ -171,6 +190,28 @@ def upload_page():
                     # Process file with Reader Agent
                     content = st.session_state.reader_agent.process_file(uploaded_file)
                     st.session_state.processed_content = content
+                    
+                    # Save file to database
+                    import config as cfg
+                    file_path = os.path.join(cfg.UPLOAD_DIR, uploaded_file.name)
+                    # Check if file exists (it should after processing)
+                    if not os.path.exists(file_path):
+                        # Find the actual saved file path
+                        saved_files = glob.glob(os.path.join(cfg.UPLOAD_DIR, uploaded_file.name.replace('.pdf', '*.pdf')))
+                        if saved_files:
+                            file_path = saved_files[0]
+                    
+                    if os.path.exists(file_path):
+                        file_id = st.session_state.db.add_file(
+                            uploaded_file.name,
+                            file_path,
+                            file_size
+                        )
+                        st.session_state.current_file_id = file_id
+                        
+                        # Save topics to database
+                        if content.get('topics'):
+                            st.session_state.db.add_topics(file_id, content.get('topics', []))
                     
                     st.success("✅ File processed successfully!")
                     
@@ -296,6 +337,25 @@ def flashcards_page():
                     try:
                         content = st.session_state.reader_agent.process_file(uploaded_file)
                         st.session_state.processed_content = content
+                        
+                        # Save file to database
+                        import config as cfg
+                        file_path = os.path.join(cfg.UPLOAD_DIR, uploaded_file.name)
+                        if not os.path.exists(file_path):
+                            saved_files = glob.glob(os.path.join(cfg.UPLOAD_DIR, uploaded_file.name.replace('.pdf', '*.pdf')))
+                            if saved_files:
+                                file_path = saved_files[0]
+                        
+                        if os.path.exists(file_path):
+                            file_id = st.session_state.db.add_file(
+                                uploaded_file.name,
+                                file_path,
+                                file_size
+                            )
+                            st.session_state.current_file_id = file_id
+                            if content.get('topics'):
+                                st.session_state.db.add_topics(file_id, content.get('topics', []))
+                        
                         st.success("✅ File processed successfully! Now you can generate flashcards.")
                         st.rerun()
                     except Exception as e:
@@ -469,6 +529,25 @@ def quizzes_page():
                     try:
                         content = st.session_state.reader_agent.process_file(uploaded_file)
                         st.session_state.processed_content = content
+                        
+                        # Save file to database
+                        import config as cfg
+                        file_path = os.path.join(cfg.UPLOAD_DIR, uploaded_file.name)
+                        if not os.path.exists(file_path):
+                            saved_files = glob.glob(os.path.join(cfg.UPLOAD_DIR, uploaded_file.name.replace('.pdf', '*.pdf')))
+                            if saved_files:
+                                file_path = saved_files[0]
+                        
+                        if os.path.exists(file_path):
+                            file_id = st.session_state.db.add_file(
+                                uploaded_file.name,
+                                file_path,
+                                file_size
+                            )
+                            st.session_state.current_file_id = file_id
+                            if content.get('topics'):
+                                st.session_state.db.add_topics(file_id, content.get('topics', []))
+                        
                         st.success("✅ File processed successfully! Now you can generate quiz.")
                         st.rerun()
                     except Exception as e:
@@ -499,7 +578,7 @@ def quizzes_page():
                     )
                     
                     st.session_state.quizzes = questions[:num_questions]
-                    st.session_state.quiz_agent.save_quiz(st.session_state.quizzes)
+                    st.session_state.quiz_agent.save_quiz(st.session_state.quizzes, st.session_state.current_file_id)
                     st.session_state.quiz_answers = {}
                     st.session_state.quiz_results = {}
                     st.success(f"✅ Generated {len(st.session_state.quizzes)} quiz questions!")
@@ -616,7 +695,7 @@ def planner_page():
             if topics:
                 plan = st.session_state.planner_agent.create_revision_plan(topics)
                 st.session_state.revision_plan = plan
-                st.session_state.planner_agent.save_plan(plan)
+                st.session_state.planner_agent.save_plan(plan, st.session_state.current_file_id)
                 st.success("✅ Revision plan created successfully!")
                 st.rerun()
             else:
@@ -692,7 +771,7 @@ def chat_page():
             context = st.session_state.chat_agent.find_relevant_context(question, chunks)
             
             # Get answer
-            result = st.session_state.chat_agent.answer_question(question, context)
+            result = st.session_state.chat_agent.answer_question(question, context, st.session_state.current_file_id)
             
             # Display answer
             st.markdown("### 💡 Answer")
